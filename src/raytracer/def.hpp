@@ -19,13 +19,19 @@ long double spin;
 long double iobs_deg;
 int phicount;
 
+struct SurfacePoint {
+  long double x;
+  long double y;
+  long double u0, u1, u2, u3;            
+};
+
 /*-----------------------------------------------------------*/
 
 void raytrace(long double xobs, long double yobs, long double iobs,
               long double xin, long double disk_length_combined,
-              long double traces[], int& stop_integration);
+              long double traces[], int &stop_integration);
 void diffeqs(long double b, long double vars[], long double diffs[]);
-void redshift(long double r, long double ktkp, long double& gg);
+void redshift(long double r, long double ktkp, long double &gg);
 // void redshift_polish_doughnut(long double r, long double th, long double l
 // ,long double ktkp, long double& gg);
 void intersection(long double x_1, long double y_1, long double z_1,
@@ -33,7 +39,7 @@ void intersection(long double x_1, long double y_1, long double z_1,
                   long double x_d[]);
 void metric(long double z1, long double z2, long double mn[][4]);
 void metric_rderivatives(long double z1, long double z2, long double dmn[][4]);
-void find_isco(long double z1, long double& isco);
+void find_isco(long double z1, long double &isco);
 // void polish_doughnut(long double r, long double theta, long double phi ,long
 // double angm_disk, long double spin, long double& w_current); void
 // emission_angle_rth(long double r, long double th, long double l, long double

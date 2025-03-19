@@ -1,6 +1,11 @@
 #include "def.hpp"
+#include <cstdio>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <sstream>
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   long double spin2;
   long double E_line, N_0, N_tot, N_tot1, N_tot2, alpha;
   long double iobs, dobs;
@@ -27,10 +32,33 @@ int main(int argc, char* argv[]) {
   char filename_o[128];
   char filename_o2[128];
 
-  FILE* finput;
-  FILE* foutput;
-  FILE* foutput_coord;
+  FILE *finput;
+  FILE *foutput;
+  FILE *foutput_coord;
 
+  std::ifstream disk("data.csv");
+  if (!disk) {
+    std::cerr << "Error: Could not open file!" << std::endl;
+    return 1;
+  }
+
+  std::string line;
+  std::getline(disk, line); // Read and ignore the header line
+
+  std::vector<SurfacePoint> diskdata;
+  while (std::getline(disk, line)) {
+    std::istringstream iss(line);
+    SurfacePoint dp;
+
+    if (!(iss >> dp.x >> dp.y >> dp.u0 >> dp.u1 >> dp.u2 >> dp.u3)) {
+      std::cerr << "Error: Malformed line - " << line << std::endl;
+      continue;
+    }
+
+    diskdata.push_back(dp);
+  }
+
+  disk.close();
   /* ----- Set free parameters ----- */
 
   // Input parameters: spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep
@@ -105,7 +133,8 @@ int main(int argc, char* argv[]) {
   /* ----- assign photon position in the grid ----- */
 
   for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
-    for (i = 0; i <= imax - 1; i++) fphi[i] = 0;
+    for (i = 0; i <= imax - 1; i++)
+      fphi[i] = 0;
 
     for (pobs = 0; pobs < 2 * Pi - 0.5 * pstep; pobs = pobs + pstep) {
       xobs = robs * cos(pobs);
@@ -115,7 +144,7 @@ int main(int argc, char* argv[]) {
 
       // printf("entering in the raytrace part of the code\n");
 
-      raytrace(xobs, yobs, iobs, xin, xout, traced, stop_integration_condition);
+      raytrace(xobs, yobs, iobs, xin, xout, traced, stop_integration_condition, diskdata.data(), diskdata.size());
 
       if (stop_integration_condition == 1) {
         fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", photon_index, xobs,

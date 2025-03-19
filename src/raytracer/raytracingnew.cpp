@@ -1,6 +1,29 @@
+bool check_below_surface(const long double rcoord, const long double thcoord,
+                         const SurfacePoint *diskdata, const size_t ddsize,
+                         size_t &rightsp, long double &factor) {
+  long double xcoord = rcoord * sin(thcoord);
+  long double ycoord = rcoord * cos(thcoord);
+
+  size_t ind;
+  for (ind = 0; ind < ddsize; ind++) {
+    SurfacePoint sp = diskdata[ind];
+    if (xcoord < sp.x) {
+      break;
+    }
+  }
+  SurfacePoint left, right;
+  left = diskdata[ind - 1]; // this can end badly...
+  right = diskdata[ind];
+  rightsp = ind;
+  factor = (xcoord - left.x) / (right.x - left.y);
+  long double interpolated_y = (1.0 - factor) * left.y + factor * right.y;
+  return interpolated_y > ycoord;
+}
+
 void raytrace(long double xobs, long double yobs, long double iobs,
               long double rin, long double disk_length_combined,
-              long double traces[5], int& stop_integration) {
+              long double traces[5], int &stop_integration,
+              const SurfacePoint *diskdata, const size_t ddsize) {
   long double dobs;
   long double xobs2, yobs2;
   long double atol, rtol;
@@ -187,7 +210,8 @@ void raytrace(long double xobs, long double yobs, long double iobs,
       /* ----- compute RK6 ----- */
 
       diffeqs(b, vars_temp, diffs);
-      for (i = 0; i <= 4; i++) k6[i] = h * diffs[i];
+      for (i = 0; i <= 4; i++)
+        k6[i] = h * diffs[i];
 
       /* ----- local error ----- */
 
@@ -216,10 +240,12 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
     thau = th;
     th = vars_4th[1];
-
-    if (cos(th) < 0.0) {
+    size_t rightindex;
+    long double factor;
+    if (check_below_surface(r, th, diskdata, ddsize, rightindex, factor)) {
       check2 = 1;
-      if (fabs(th - thau) <= thtol) count++;
+      if (fabs(th - thau) <= thtol)
+        count++;
 
       if (count > 0) {
         rau = r;
@@ -232,6 +258,9 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
         kr = vars_4th[3];
         kth = vars_4th[4];
+
+        // if both left and right have height zero, the photon misses the disk,
+        // otherwise it does not.
 
         intersection(rau, thau, phiau, r, th, phi, xem);
 
@@ -251,6 +280,9 @@ void raytrace(long double xobs, long double yobs, long double iobs,
           break; /* the photon hits the disk */
         } else
           stop_integration = 2; /* the photon misses the disk */
+        // this is a simplification, we can only be sure about the final
+        // whereabouts of the photon if it ends up beyond the event horizon ore
+        // is ejected to infinity
       } else {
         th = thau;
         h /= 2.;
@@ -271,20 +303,20 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     Delta = r * r - 2. * r + spin2;
 
     if (Delta < 1.e-3)
-      stop_integration = 4;  // printf("photon crosses the horizon\n"); /* the
-                             // photon crosses the horizon */
+      stop_integration = 4; // printf("photon crosses the horizon\n"); /* the
+                            // photon crosses the horizon */
 
     if (r < 1.)
-      stop_integration = 5;  // printf("photon crosses the horizon\n"); /* the
-                             // photon crosses the horizon */
+      stop_integration = 5; // printf("photon crosses the horizon\n"); /* the
+                            // photon crosses the horizon */
 
     if (r != r)
-      stop_integration = 6;  // printf("numerical problem\n");          /*
-                             // numerical problems! */
+      stop_integration = 6; // printf("numerical problem\n");          /*
+                            // numerical problems! */
 
     if (r > 1.05 * dobs)
-      stop_integration = 7;  // printf("photon escaped to infinity\n");   /* the
-                             // photon escapes to infinity */
+      stop_integration = 7; // printf("photon escaped to infinity\n");   /* the
+                            // photon escapes to infinity */
 
   } while (stop_integration == 0);
 
