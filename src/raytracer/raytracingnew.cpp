@@ -1,9 +1,6 @@
-bool check_below_surface(const long double rcoord, const long double thcoord,
-                         const SurfacePoint *diskdata, const size_t ddsize,
-                         size_t &rightsp, long double &factor) {
+size_t find_sp_index(const long double rcoord, const long double thcoord,
+                     const SurfacePoint *diskdata, const size_t ddsize) {
   long double xcoord = rcoord * sin(thcoord);
-  long double ycoord = rcoord * cos(thcoord);
-
   size_t ind;
   for (ind = 0; ind < ddsize; ind++) {
     SurfacePoint sp = diskdata[ind];
@@ -11,13 +8,25 @@ bool check_below_surface(const long double rcoord, const long double thcoord,
       break;
     }
   }
+  return ind;
+}
+
+long double check_below_surface(const long double rcoord,
+                                const long double thcoord,
+                                const SurfacePoint *diskdata,
+                                const size_t ddsize, size_t &rightsp,
+                                long double &factor) {
+  long double xcoord = rcoord * sin(thcoord);
+  // long double ycoord = rcoord * cos(thcoord);
+
+  size_t ind = find_sp_index(rcoord, thcoord, diskdata, ddsize);
   SurfacePoint left, right;
   left = diskdata[ind - 1]; // this can end badly...
   right = diskdata[ind];
   rightsp = ind;
-  factor = (xcoord - left.x) / (right.x - left.y);
+  factor = (xcoord - left.x) / (right.x - left.x);
   long double interpolated_y = (1.0 - factor) * left.y + factor * right.y;
-  return interpolated_y > ycoord;
+  return interpolated_y;
 }
 
 void raytrace(long double xobs, long double yobs, long double iobs,
@@ -242,7 +251,10 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     th = vars_4th[1];
     size_t rightindex;
     long double factor;
-    if (check_below_surface(r, th, diskdata, ddsize, rightindex, factor)) {
+    long double ycoord = r * cos(th);
+    long double height =
+        check_below_surface(r, th, diskdata, ddsize, rightindex, factor);
+    if (ycoord < height) {
       check2 = 1;
       if (fabs(th - thau) <= thtol)
         count++;
@@ -262,9 +274,11 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         // if both left and right have height zero, the photon misses the disk,
         // otherwise it does not.
 
-        intersection(rau, thau, phiau, r, th, phi, xem);
+        //intersection(rau, thau, phiau, r, th, phi, xem);
 
-        if (xem[1] > rin && xem[1] < disk_length_combined) {
+        if (height >= 0.0) {
+          // next step is redshift calculation with data from the intersection
+          // point. we also need the interpolated 4-vel etc
           long double x1, y1, z1, x2, y2, z2, xyd, zd;
 
           x1 = r * sin(th) * cos(phi);
