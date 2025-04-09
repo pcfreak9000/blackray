@@ -1,5 +1,5 @@
 size_t find_sp_index(const long double rcoord, const long double thcoord,
-                     const SurfacePoint *diskdata, const size_t ddsize) {
+    const SurfacePoint *diskdata, const size_t ddsize) {
   long double xcoord = rcoord * sin(thcoord);
   size_t ind;
   for (ind = 0; ind < ddsize; ind++) {
@@ -11,28 +11,24 @@ size_t find_sp_index(const long double rcoord, const long double thcoord,
   return ind;
 }
 
-long double check_below_surface(const long double rcoord,
-                                const long double thcoord,
-                                const SurfacePoint *diskdata,
-                                const size_t ddsize, size_t &rightsp,
-                                long double &factor) {
+long double get_height(const long double rcoord, const long double thcoord,
+    const SurfacePoint *diskdata, const size_t ddsize, size_t &rightsp,
+    long double &factor) {
   long double xcoord = rcoord * sin(thcoord);
   // long double ycoord = rcoord * cos(thcoord);
 
-  size_t ind = find_sp_index(rcoord, thcoord, diskdata, ddsize);
+  rightsp = find_sp_index(rcoord, thcoord, diskdata, ddsize);
   SurfacePoint left, right;
-  left = diskdata[ind - 1]; // this can end badly...
-  right = diskdata[ind];
-  rightsp = ind;
+  left = diskdata[rightsp - 1]; // this can end badly...
+  right = diskdata[rightsp];
   factor = (xcoord - left.x) / (right.x - left.x);
   long double interpolated_y = (1.0 - factor) * left.y + factor * right.y;
   return interpolated_y;
 }
 
 void raytrace(long double xobs, long double yobs, long double iobs,
-              long double rin, long double disk_length_combined,
-              long double traces[5], int &stop_integration,
-              const SurfacePoint *diskdata, const size_t ddsize) {
+    long double rin, long double disk_length_combined, RayHit &hit,
+    int &stop_integration, const SurfacePoint *diskdata, const size_t ddsize) {
   long double dobs;
   long double xobs2, yobs2;
   long double atol, rtol;
@@ -99,14 +95,16 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
   metric(r0, th0, met);
 
-  fact3 = sqrt(met[0][3] * met[0][3] * kphi0 * kphi0 -
-               met[0][0] * (met[1][1] * kr0 * kr0 + met[2][2] * kth0 * kth0 +
-                            met[3][3] * kphi0 * kphi0));
+  fact3 = sqrt(
+      met[0][3] * met[0][3] * kphi0 * kphi0
+          - met[0][0]
+              * (met[1][1] * kr0 * kr0 + met[2][2] * kth0 * kth0
+                  + met[3][3] * kphi0 * kphi0));
 
   kt0 = -(met[0][3] * kphi0 + fact3) / met[0][0];
 
-  b = -(met[3][3] * kphi0 + met[0][3] * kt0) /
-      (met[0][0] * kt0 + met[0][3] * kphi0);
+  b = -(met[3][3] * kphi0 + met[0][3] * kt0)
+      / (met[0][0] * kt0 + met[0][3] * kphi0);
 
   kr0 /= fact3;
   kth0 /= fact3;
@@ -203,8 +201,8 @@ void raytrace(long double xobs, long double yobs, long double iobs,
       diffeqs(b, vars_temp, diffs);
       for (i = 0; i <= 4; i++) {
         k4[i] = h * diffs[i];
-        vars_temp[i] =
-            vars[i] + d1 * k1[i] + d2 * k2[i] + d3 * k3[i] + d4 * k4[i];
+        vars_temp[i] = vars[i] + d1 * k1[i] + d2 * k2[i] + d3 * k3[i]
+            + d4 * k4[i];
       }
 
       /* ----- compute RK5 ----- */
@@ -212,8 +210,8 @@ void raytrace(long double xobs, long double yobs, long double iobs,
       diffeqs(b, vars_temp, diffs);
       for (i = 0; i <= 4; i++) {
         k5[i] = h * diffs[i];
-        vars_temp[i] = vars[i] + e1 * k1[i] + e2 * k2[i] + e3 * k3[i] +
-                       e4 * k4[i] + e5 * k5[i];
+        vars_temp[i] = vars[i] + e1 * k1[i] + e2 * k2[i] + e3 * k3[i]
+            + e4 * k4[i] + e5 * k5[i];
       }
 
       /* ----- compute RK6 ----- */
@@ -225,10 +223,10 @@ void raytrace(long double xobs, long double yobs, long double iobs,
       /* ----- local error ----- */
 
       for (i = 0; i <= 4; i++) {
-        vars_4th[i] = vars[i] + f1 * k1[i] + f2 * k2[i] + f3 * k3[i] +
-                      f4 * k4[i] + f5 * k5[i];
-        vars_5th[i] = vars[i] + g1 * k1[i] + g2 * k2[i] + g3 * k3[i] +
-                      g4 * k4[i] + g5 * k5[i] + g6 * k6[i];
+        vars_4th[i] = vars[i] + f1 * k1[i] + f2 * k2[i] + f3 * k3[i]
+            + f4 * k4[i] + f5 * k5[i];
+        vars_5th[i] = vars[i] + g1 * k1[i] + g2 * k2[i] + g3 * k3[i]
+            + g4 * k4[i] + g5 * k5[i] + g6 * k6[i];
 
         err = fabs((vars_4th[i] - vars_5th[i]) / max(vars_4th[i], vars[i]));
 
@@ -252,8 +250,8 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     size_t rightindex;
     long double factor;
     long double ycoord = r * cos(th);
-    long double height =
-        check_below_surface(r, th, diskdata, ddsize, rightindex, factor);
+    long double height = get_height(r, th, diskdata, ddsize, rightindex,
+        factor);
     if (ycoord < height) {
       check2 = 1;
       if (fabs(th - thau) <= thtol)
@@ -276,19 +274,19 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
         //intersection(rau, thau, phiau, r, th, phi, xem);
 
-        if (height >= 0.0) {
+        if (height > 0.0) {
           // next step is redshift calculation with data from the intersection
           // point. we also need the interpolated 4-vel etc
-          long double x1, y1, z1, x2, y2, z2, xyd, zd;
-
-          x1 = r * sin(th) * cos(phi);
-          y1 = r * sin(th) * sin(phi);
-          z1 = r * cos(th);
-          x2 = rau * sin(thau) * cos(phiau);
-          y2 = rau * sin(thau) * sin(phiau);
-          z2 = rau * cos(thau);
-          xyd = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-          zd = fabs(z2 - z1);
+//          long double x1, y1, z1, x2, y2, z2, xyd, zd;
+//
+//          x1 = r * sin(th) * cos(phi);
+//          y1 = r * sin(th) * sin(phi);
+//          z1 = r * cos(th);
+//          x2 = rau * sin(thau) * cos(phiau);
+//          y2 = rau * sin(thau) * sin(phiau);
+//          z2 = rau * cos(thau);
+//          xyd = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+//          zd = fabs(z2 - z1);
           // printf("success\n");
           stop_integration = 1;
           break; /* the photon hits the disk */
@@ -335,16 +333,24 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   } while (stop_integration == 0);
 
   if (stop_integration == 1) {
+    //we also need the density at the point of the hit
+
+    //to calculate the redshift, we need the photon momentum k (which is present with kr and kth, kt=-E=kt0, kphi=L=kphi0) the observer 4-vel,
+    //which is (1,0,0,0), and the interpolated 4-vel of the disk. With this, we can calculate the gfactor.
     redshift(xem[1], const1, gfactor);
+
+
     /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
     cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
   } else {
     xem[1] = 0.0;
     gfactor = 0.0;
   }
-
-  traces[0] = xem[1];
-  traces[1] = cosem;
-  // traces[2] = xem[3];
-  traces[3] = gfactor;
+  hit.cosem = cosem;
+  hit.r = xem[1];
+  hit.gfactor = gfactor;
+//  traces[0] = xem[1];
+//  traces[1] = cosem;
+//  // traces[2] = xem[3];
+//  traces[3] = gfactor;
 }

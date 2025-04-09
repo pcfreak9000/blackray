@@ -25,11 +25,18 @@ struct SurfacePoint {
   long double u0, u1, u2, u3;            
 };
 
+struct RayHit {
+  long double cosem;
+  long double gfactor;
+  long double r;
+};
+
 /*-----------------------------------------------------------*/
 
 void raytrace(long double xobs, long double yobs, long double iobs,
-              long double xin, long double disk_length_combined,
-              long double traces[], int &stop_integration);
+              long double rin, long double disk_length_combined,
+              RayHit &hit, int &stop_integration,
+              const SurfacePoint *diskdata, const size_t ddsize);
 void diffeqs(long double b, long double vars[], long double diffs[]);
 void redshift(long double r, long double ktkp, long double &gg);
 // void redshift_polish_doughnut(long double r, long double th, long double l

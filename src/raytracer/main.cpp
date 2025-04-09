@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   long double E_obs[imax];
   long double N_obs[imax];
   long double fphi[imax], fphi0[imax];
-  long double traced[5];
+  RayHit hit;
 
   int stop_integration_condition = 0;
   int n1, n2, n3;
@@ -131,7 +131,6 @@ int main(int argc, char *argv[]) {
   foutput_coord = fopen(filename_o2, "w");
 
   /* ----- assign photon position in the grid ----- */
-
   for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
     for (i = 0; i <= imax - 1; i++)
       fphi[i] = 0;
@@ -144,15 +143,15 @@ int main(int argc, char *argv[]) {
 
       // printf("entering in the raytrace part of the code\n");
 
-      raytrace(xobs, yobs, iobs, xin, xout, traced, stop_integration_condition, diskdata.data(), diskdata.size());
+      raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition, diskdata.data(), diskdata.size());
 
       if (stop_integration_condition == 1) {
         fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", photon_index, xobs,
-                yobs, traced[0], traced[3], traced[1]);
+                yobs, hit.r, hit.gfactor, hit.cosem);
 
         photon_index++;
 
-        gfactor = traced[3];
+        gfactor = hit.gfactor;
         pp = gfactor * E_line;
 
         /* --- integration - part 1 --- */
@@ -160,7 +159,7 @@ int main(int argc, char *argv[]) {
         for (i = 0; i <= imax - 2; i++) {
           if (E_obs[i] < pp && E_obs[i + 1] > pp) {
             qq = gfactor * gfactor * gfactor * gfactor;
-            qq = qq * pow(traced[0], alpha);
+            qq = qq * pow(hit.r, alpha);
 
             fphi[i] = fphi[i] + qq;
           }

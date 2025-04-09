@@ -18,11 +18,11 @@ void diffeqs(long double b, long double vars[], long double diffs[]) {
   th = vars[1];
 
   t1 = cos(th);
-  t2 = r * r;
-  t3 = pow(t2, 0.2e1);
-  t4 = t2 * t3;
-  t5 = r * t3;
-  t6 = r * t2;
+  t2 = r * r; //r^2
+  t3 = pow(t2, 0.2e1); //r^4
+  t4 = t2 * t3; //r^6
+  t5 = r * t3; //r^5
+  t6 = r * t2; //r^3
   t7 = spin * spin;
   t8 = t7 * pow(t1, 0.2e1);
   t9 = (t8 + t2) * r + epsi3;
