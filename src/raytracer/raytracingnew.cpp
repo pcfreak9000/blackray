@@ -11,19 +11,24 @@ size_t find_sp_index(const long double rcoord, const long double thcoord,
   return ind;
 }
 
-long double get_height(const long double rcoord, const long double thcoord,
-    const SurfacePoint *diskdata, const size_t ddsize, size_t &rightsp,
-    long double &factor) {
-  long double xcoord = rcoord * sin(thcoord);
-  // long double ycoord = rcoord * cos(thcoord);
+long double interpolate(long double a, long double b, long double f) {
+  return (1.0 - f) * a + f * b;
+}
 
-  rightsp = find_sp_index(rcoord, thcoord, diskdata, ddsize);
+void get_interpolated_sp(const long double rcoord, const long double thcoord,
+    const SurfacePoint *diskdata, const size_t ddsize, SurfacePoint &out) {
+  long double xcoord = rcoord * sin(thcoord);
+  size_t rightsp = find_sp_index(rcoord, thcoord, diskdata, ddsize);
   SurfacePoint left, right;
   left = diskdata[rightsp - 1]; // this can end badly...
   right = diskdata[rightsp];
-  factor = (xcoord - left.x) / (right.x - left.x);
-  long double interpolated_y = (1.0 - factor) * left.y + factor * right.y;
-  return interpolated_y;
+  long double factor = (xcoord - left.x) / (right.x - left.x);
+  out.x = xcoord;
+  out.y = interpolate(left.y, right.y, factor);
+  out.u0 = interpolate(left.u0, right.u0, factor);
+  out.u1 = interpolate(left.u1, right.u1, factor);
+  out.u2 = interpolate(left.u2, right.u2, factor);
+  out.u3 = interpolate(left.u3, right.u3, factor);
 }
 
 void raytrace(long double xobs, long double yobs, long double iobs,
@@ -160,6 +165,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   long double g4 = 28561.0 / 56430.0;
   long double g5 = -9.0 / 50.0;
   long double g6 = 2.0 / 55.0;
+  SurfacePoint spi;
 
   do {
     iter++;
@@ -247,12 +253,9 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
     thau = th;
     th = vars_4th[1];
-    size_t rightindex;
-    long double factor;
     long double ycoord = r * cos(th);
-    long double height = get_height(r, th, diskdata, ddsize, rightindex,
-        factor);
-    if (ycoord < height) {
+    get_interpolated_sp(r, th, diskdata, ddsize, spi);
+    if (ycoord < spi.y) {
       check2 = 1;
       if (fabs(th - thau) <= thtol)
         count++;
@@ -274,7 +277,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
         //intersection(rau, thau, phiau, r, th, phi, xem);
 
-        if (height > 0.0) {
+        if (spi.y > 0.0) {
           // next step is redshift calculation with data from the intersection
           // point. we also need the interpolated 4-vel etc
 //          long double x1, y1, z1, x2, y2, z2, xyd, zd;
@@ -333,12 +336,14 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   } while (stop_integration == 0);
 
   if (stop_integration == 1) {
-    //we also need the density at the point of the hit
+    //we also need the density at the point of the hit... for what????
 
     //to calculate the redshift, we need the photon momentum k (which is present with kr and kth, kt=-E=kt0, kphi=L=kphi0) the observer 4-vel,
     //which is (1,0,0,0), and the interpolated 4-vel of the disk. With this, we can calculate the gfactor.
-    redshift(xem[1], const1, gfactor);
-
+    //do we need the metric is it contained in the kvector already???
+    //redshift(xem[1], const1, gfactor);
+    gfactor = kt0
+        / (kt0 * spi.u0 + kr * spi.u1 + kth * spi.u2 + kphi0 * spi.u3);
 
     /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
     cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);

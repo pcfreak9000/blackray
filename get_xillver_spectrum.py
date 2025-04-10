@@ -4,7 +4,7 @@ from astropy.io import fits
 import numpy as np
 from sys import argv
 
-# path_to_xillver_file = "/Users/askarabd/Documents/fudan/FITS/xillver-a-Ec5.fits"
+path_to_xillver_file = "/home/roman/xillver-a-Ec5.fits"
 
 gamma = 2
 afe = 1.5

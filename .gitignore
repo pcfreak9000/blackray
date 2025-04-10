@@ -1,3 +1,7 @@
+data/
 build/
 conv
 rt
+src/.cproject
+src/.project
+src/.settings/
