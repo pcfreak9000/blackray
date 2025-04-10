@@ -1,6 +1,5 @@
-size_t find_sp_index(const long double rcoord, const long double thcoord,
-    const SurfacePoint *diskdata, const size_t ddsize) {
-  long double xcoord = rcoord * sin(thcoord);
+size_t find_sp_index(const long double xcoord, const SurfacePoint *diskdata,
+    const size_t ddsize) {
   size_t ind;
   for (ind = 0; ind < ddsize; ind++) {
     SurfacePoint sp = diskdata[ind];
@@ -15,13 +14,30 @@ long double interpolate(long double a, long double b, long double f) {
   return (1.0 - f) * a + f * b;
 }
 
-void get_interpolated_sp(const long double rcoord, const long double thcoord,
-    const SurfacePoint *diskdata, const size_t ddsize, SurfacePoint &out) {
-  long double xcoord = rcoord * sin(thcoord);
-  size_t rightsp = find_sp_index(rcoord, thcoord, diskdata, ddsize);
+void get_interpolated_sp(const long double xcoord, const SurfacePoint *diskdata,
+    const size_t ddsize, SurfacePoint &out) {
+  size_t rightsp = find_sp_index(xcoord, diskdata, ddsize);
   SurfacePoint left, right;
-  left = diskdata[rightsp - 1]; // this can end badly...
-  right = diskdata[rightsp];
+  if (rightsp >= 0) {
+    left = diskdata[rightsp - 1]; //does this copy the diskdata stuff into 'left'...?
+  } else {
+    left.u0 = 0.0;
+    left.u1 = 0.0;
+    left.u2 = 0.0;
+    left.u3 = 0.0;
+    left.x = xcoord;
+    left.y = 0.0;
+  }
+  if (rightsp < ddsize) {
+    right = diskdata[rightsp];
+  } else {
+    right.u0 = 0.0;
+    right.u1 = 0.0;
+    right.u2 = 0.0;
+    right.u3 = 0.0;
+    right.x = xcoord;
+    right.y = 0.0;
+  }
   long double factor = (xcoord - left.x) / (right.x - left.x);
   out.x = xcoord;
   out.y = interpolate(left.y, right.y, factor);
@@ -253,8 +269,9 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
     thau = th;
     th = vars_4th[1];
+    long double xcoord = r * sin(th);
     long double ycoord = r * cos(th);
-    get_interpolated_sp(r, th, diskdata, ddsize, spi);
+    get_interpolated_sp(xcoord, diskdata, ddsize, spi);
     if (ycoord < spi.y) {
       check2 = 1;
       if (fabs(th - thau) <= thtol)
