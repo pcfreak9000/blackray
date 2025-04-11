@@ -36,7 +36,8 @@ int main(int argc, char *argv[]) {
   FILE *foutput;
   FILE *foutput_coord;
 
-  std::ifstream disk("data.csv");
+  const char* diskdatafile = argv[10];
+  std::ifstream disk(diskdatafile);
   if (!disk) {
     std::cerr << "Error: Could not open file!" << std::endl;
     return 1;

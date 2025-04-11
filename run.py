@@ -8,6 +8,7 @@ import numpy as np
 # INPUT PARAMETERS
 # ----------------------------------------------------------------------------------------------------
 
+path_to_disk_data_file = "sdfds.csv"
 path_to_xillver_file = "xillver-a-Ec5.fits"
 gamma = 1.8
 afe = 1
@@ -31,7 +32,7 @@ pstep  = 2*np.pi/Nph;
 # ----------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
-rt_command = "./rt %f %f %f %f %f %f %f %f %f"%(spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep)
+rt_command = "./rt %f %f %f %f %f %f %f %f %f %s"%(spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep, path_to_disk_data_file)
 # os.system("cd raytracer/")
 print("Start of ray-tracing part ...")
 os.system(rt_command)

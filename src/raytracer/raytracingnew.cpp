@@ -290,11 +290,12 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         kth = vars_4th[4];
 
         // if both left and right have height zero, the photon misses the disk,
+        // if the the intersection coordinate is negative, the photon also misses the disk
         // otherwise it does not.
 
         //intersection(rau, thau, phiau, r, th, phi, xem);
 
-        if (spi.y > 0.0) {
+        if (spi.y > 0.0 && spi.x > 0.0) {
           // next step is redshift calculation with data from the intersection
           // point. we also need the interpolated 4-vel etc
 //          long double x1, y1, z1, x2, y2, z2, xyd, zd;
@@ -357,7 +358,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
     //to calculate the redshift, we need the photon momentum k (which is present with kr and kth, kt=-E=kt0, kphi=L=kphi0) the observer 4-vel,
     //which is (1,0,0,0), and the interpolated 4-vel of the disk. With this, we can calculate the gfactor.
-    //do we need the metric is it contained in the kvector already???
+    //do we need the metric or is it contained in the kvector already???
     //redshift(xem[1], const1, gfactor);
     gfactor = kt0
         / (kt0 * spi.u0 + kr * spi.u1 + kth * spi.u2 + kphi0 * spi.u3);
