@@ -269,8 +269,8 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
     thau = th;
     th = vars_4th[1];
-    long double xcoord = r * sin(th);
-    long double ycoord = r * cos(th);
+    long double xcoord = std::sqrt(r*r + spin2) * sin(th);
+    long double ycoord = std::sqrt(r*r + spin2) * cos(th);
     get_interpolated_sp(xcoord, diskdata, ddsize, spi);
     if (ycoord < spi.y) {
       check2 = 1;
