@@ -8,24 +8,24 @@ import numpy as np
 # INPUT PARAMETERS
 # ----------------------------------------------------------------------------------------------------
 
-path_to_disk_data_file = "sdfds.csv"
-path_to_xillver_file = "xillver-a-Ec5.fits"
+path_to_disk_data_file = "disk.csv"
+path_to_xillver_file = "/home/roman/xillver-a-Ec5.fits"
 gamma = 1.8
 afe = 1
 logxi = 1.
 ecut = 300
-incl = 70
+incl = 10
 
-spin = 0.9
+spin = 0.0
 a13 = 0
 a22 = 0
 epsi3 = 0
 a52 = 0
 alpha = -3
 
-Nr = 1000
-Nph = 400
-Rmax = 500
+Nr = 2000 #1000
+Nph = 800 #400
+Rmax = 80
 rstep  = np.e**((np.log(Rmax)-np.log(np.cos(np.pi*incl/180)))/Nr);
 pstep  = 2*np.pi/Nph;
 

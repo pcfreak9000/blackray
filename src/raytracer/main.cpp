@@ -6,6 +6,7 @@
 #include <sstream>
 
 int main(int argc, char *argv[]) {
+  std::cout << "Setting up raytracer..." << std::endl;
   long double spin2;
   long double E_line, N_0, N_tot, N_tot1, N_tot2, alpha;
   long double iobs, dobs;
@@ -98,7 +99,7 @@ int main(int argc, char *argv[]) {
   /* ----- Set computational parameters ----- */
 
   robs_i = 1;
-  robs_f = 500;
+  robs_f = 80;
 
   // rstep  = 1.008;
   rstep2 = (rstep - 1) / rstep;
@@ -130,9 +131,12 @@ int main(int argc, char *argv[]) {
            spin, iobs_deg, epsi3, a13, a22, a52);
 
   foutput_coord = fopen(filename_o2, "w");
-
+  std::ofstream tmpOutFile("output.txt");
+  std::cout << "Starting raytracing loop" << std::endl;
   /* ----- assign photon position in the grid ----- */
   for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
+    std::cout << "Raytracing: " << (robs-robs_i)/(robs_f-robs_i) << std::endl;
+
     for (i = 0; i <= imax - 1; i++)
       fphi[i] = 0;
 
@@ -154,6 +158,7 @@ int main(int argc, char *argv[]) {
 
         gfactor = hit.gfactor;
         pp = gfactor * E_line;
+        tmpOutFile << xobs << " " << yobs << " " << gfactor << std::endl;
 
         /* --- integration - part 1 --- */
 
@@ -165,6 +170,8 @@ int main(int argc, char *argv[]) {
             fphi[i] = fphi[i] + qq;
           }
         }
+      } else {
+        tmpOutFile << xobs << " " << yobs << " " << 0.0 << std::endl;
       }
     }
 
@@ -175,7 +182,8 @@ int main(int argc, char *argv[]) {
       N_obs[i] = N_obs[i] + fr;
     }
   }
-
+  std::cout << "Finishing..." << std::endl;
+  tmpOutFile.close();
   /* --- print spectrum --- */
 
   foutput = fopen(filename_o, "w");
@@ -192,6 +200,6 @@ int main(int argc, char *argv[]) {
 
   fclose(foutput);
   fclose(foutput_coord);
-
+  std::cout << "Done" << std::endl;
   return 0;
 }
