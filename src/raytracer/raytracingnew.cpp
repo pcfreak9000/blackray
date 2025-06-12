@@ -88,7 +88,8 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   errmin = 1.0e-8;
   errmax = 1.0e-6;
   atol = 1.0e-10;
-  rtol = 1.0e-10;
+  //rtol = 1.0e-10;
+  rtol = 1.0e-8;
   long double thtol = 1.0e-8;
   int count, iter;
 
@@ -182,7 +183,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   long double g5 = -9.0 / 50.0;
   long double g6 = 2.0 / 55.0;
   SurfacePoint spi;
-
+  long double hc=0.0;
   do {
     iter++;
     vars[0] = r;
@@ -264,17 +265,73 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         h *= 2.0;
 
     } while (check == 1);
-
+    hc += check==-1? h /2.0 : h;
     /* ----- solutions to the fourth-order RKN method ----- */
 
     thau = th;
     th = vars_4th[1];
+
+//    if (cos(th) < 0.0) {
+//      check2 = 1;
+//      if (fabs(th - thau) <= thtol) count++;
+//
+//      if (count > 0) {
+//        rau = r;
+//        phiau = phi;
+//
+//        kthau = kth;
+//
+//        r = vars_4th[0];
+//        phi = vars_4th[2];
+//
+//        kr = vars_4th[3];
+//        kth = vars_4th[4];
+//
+//        intersection(rau, thau, phiau, r, th, phi, xem);
+//
+//        if (xem[1] > rin && xem[1] < disk_length_combined) {
+//          long double x1, y1, z1, x2, y2, z2, xyd, zd;
+//
+//          x1 = r * sin(th) * cos(phi);
+//          y1 = r * sin(th) * sin(phi);
+//          z1 = r * cos(th);
+//          x2 = rau * sin(thau) * cos(phiau);
+//          y2 = rau * sin(thau) * sin(phiau);
+//          z2 = rau * cos(thau);
+//          xyd = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+//          zd = fabs(z2 - z1);
+//          // printf("success\n");
+//          stop_integration = 1;
+//          break; /* the photon hits the disk */
+//        } else
+//          stop_integration = 2; /* the photon misses the disk */
+//      } else {
+//        th = thau;
+//        h /= 2.;
+//      }
+//    } else {
+//      rau = r;
+//      phiau = phi;
+//
+//      kthau = kth;
+//
+//      r = vars_4th[0];
+//      phi = vars_4th[2];
+//
+//      kr = vars_4th[3];
+//      kth = vars_4th[4];
+//    }
+
     long double xcoord = std::sqrt(r*r + spin2) * sin(th);
     long double ycoord = std::sqrt(r*r + spin2) * cos(th);
+    long double ycoordprev = std::sqrt(rau*rau + spin2) * cos(thau);
     get_interpolated_sp(xcoord, diskdata, ddsize, spi);
-    if (ycoord < spi.y) {
+    //if(ycoord <= spi.y/10.0 || ycoord >= -spi.y/10.0) {
+#define DEBUG_DIV 1000000.0
+    if((ycoord <= spi.y/DEBUG_DIV && ycoordprev > spi.y/DEBUG_DIV) || (ycoord >= -spi.y/DEBUG_DIV && ycoordprev < -spi.y/DEBUG_DIV)) {
+    //if ((ycoord >= 0 && ycoord < spi.y/10.0) || (ycoord < 0 && ycoord > -spi.y/10.0)) {
       check2 = 1;
-      if (fabs(th - thau) <= thtol)
+      if (fabs(th - thau) <= thtol && fabs(r-rau) <= rtol)
         count++;
 
       if (count > 0) {
@@ -310,7 +367,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 //          zd = fabs(z2 - z1);
           // printf("success\n");
           stop_integration = 1;
-          break; /* the photon hits the disk */
+          //break; /* the photon hits the disk */
         } else
           stop_integration = 2; /* the photon misses the disk */
         // this is a simplification, we can only be sure about the final
@@ -318,7 +375,10 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         // is ejected to infinity
       } else {
         th = thau;
+        r = rau;
+        hc -= check==-1? h / 2.0 : h;
         h /= 2.;
+        //std::cout << h << std::endl;
       }
     } else {
       rau = r;
@@ -350,10 +410,16 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     if (r > 1.05 * dobs)
       stop_integration = 7; // printf("photon escaped to infinity\n");   /* the
                             // photon escapes to infinity */
-
+    if (iter > 10000)
+      stop_integration = 255;
+//    if(stop_integration!=0){
+//      std::cout << "int cond " << stop_integration << std::endl;
+//      std::cout << "Iter " << iter << std::endl;
+//    }
   } while (stop_integration == 0);
 
   if (stop_integration == 1) {
+    xem[1] = r;
     //we also need the density at the point of the hit... for what????
 
     //to calculate the redshift, we need the photon momentum k (which is present with kr and kth, kt=-E=kt0, kphi=L=kphi0) the observer 4-vel,
@@ -372,6 +438,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   hit.cosem = cosem;
   hit.r = xem[1];
   hit.gfactor = gfactor;
+  hit.hc = hc;
 //  traces[0] = xem[1];
 //  traces[1] = cosem;
 //  // traces[2] = xem[3];

@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 
   /*** thin disk parameters  ***/
   xin = isco; /* inner radius of the accretion disk; set isco */
-  xout = 500; /* outer radius of the accretion disk */
+  xout = 50; /* outer radius of the accretion disk */
 
   /* ----- Set computational parameters ----- */
 
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
 
         gfactor = hit.gfactor;
         pp = gfactor * E_line;
-        tmpOutFile << xobs << " " << yobs << " " << gfactor << std::endl;
+        tmpOutFile << xobs << " " << yobs << " " << gfactor << " " << stop_integration_condition << " " << hit.hc << std::endl;
 
         /* --- integration - part 1 --- */
 
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
           }
         }
       } else {
-        tmpOutFile << xobs << " " << yobs << " " << 0.0 << std::endl;
+        tmpOutFile << xobs << " " << yobs << " " << 0.0 << " " << stop_integration_condition << " " << hit.hc << std::endl;
       }
     }
 

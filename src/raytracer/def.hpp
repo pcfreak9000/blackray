@@ -29,6 +29,7 @@ struct RayHit {
   long double cosem;
   long double gfactor;
   long double r;
+  long double hc;
 };
 
 /*-----------------------------------------------------------*/
