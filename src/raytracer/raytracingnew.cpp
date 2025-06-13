@@ -1,50 +1,52 @@
-size_t find_sp_index(const long double xcoord, const SurfacePoint *diskdata,
-    const size_t ddsize) {
-  size_t ind;
-  for (ind = 0; ind < ddsize; ind++) {
-    SurfacePoint sp = diskdata[ind];
-    if (xcoord < sp.x) {
-      break;
-    }
-  }
-  return ind;
-}
+#define DEBUG_DIV 1000.0
+#define MAX_ITER 3000
+#define NO_INTERSECT -1
+#define INTERSECT 0
+#define TOO_MANY_INTERSECT -2
+
+#define SQR(x) ((x)*(x))
 
 long double interpolate(long double a, long double b, long double f) {
   return (1.0 - f) * a + f * b;
 }
 
-void get_interpolated_sp(const long double xcoord, const SurfacePoint *diskdata,
-    const size_t ddsize, SurfacePoint &out) {
-  size_t rightsp = find_sp_index(xcoord, diskdata, ddsize);
-  SurfacePoint left, right;
-  if (rightsp >= 0) {
-    left = diskdata[rightsp - 1]; //does this copy the diskdata stuff into 'left'...?
-  } else {
-    left.u0 = 0.0;
-    left.u1 = 0.0;
-    left.u2 = 0.0;
-    left.u3 = 0.0;
-    left.x = xcoord;
-    left.y = 0.0;
+long double checkIntersect(long double x1, long double y1, long double x2,
+    long double y2, long double x3, long double y3, long double x4,
+    long double y4) {
+  long double num = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
+  long double denum = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  long double t = num / denum;
+  if (t >= 0 && t <= 1) {
+    return t;
   }
-  if (rightsp < ddsize) {
-    right = diskdata[rightsp];
-  } else {
-    right.u0 = 0.0;
-    right.u1 = 0.0;
-    right.u2 = 0.0;
-    right.u3 = 0.0;
-    right.x = xcoord;
-    right.y = 0.0;
+  return NO_INTERSECT;
+}
+
+//finds any intersection. it is not guranteed that it is the closest one, i.e. the first hit. Sufficiently small stepsize should circumvent the problem,
+//as well as retaking the step with a smaller stepsize.
+int get_interpolated_sp(const long double x1, const long double y1,
+    const long double x2, const long double y2, const SurfacePoint *diskdata,
+    const size_t ddsize, SurfacePoint &out, bool mirrory) {
+  for (size_t i = 0; i < ddsize - 1; i++) {
+    SurfacePoint p0 = diskdata[i];
+    SurfacePoint p1 = diskdata[i + 1];
+    long double mul = mirrory ? -1 : 1;
+    long double pt = checkIntersect(p0.x, mul * p0.y / DEBUG_DIV, p1.x,
+        mul * p1.y / DEBUG_DIV, x1, y1, x2, y2);
+    int intersects = 0;
+    if (pt != NO_INTERSECT) {
+      long double xi = p0.x + pt * (p1.x - p0.x);
+      long double yi = mul * (p0.y + pt * (p1.y - p0.y));
+      out.x = xi;
+      out.y = yi / DEBUG_DIV;
+      out.u0 = interpolate(p0.u0, p1.u0, pt);
+      out.u1 = interpolate(p0.u1, p1.u1, pt);
+      out.u2 = interpolate(p0.u2, p1.u2, pt);
+      out.u3 = interpolate(p0.u3, p1.u3, pt);
+      return INTERSECT;
+    }
   }
-  long double factor = (xcoord - left.x) / (right.x - left.x);
-  out.x = xcoord;
-  out.y = interpolate(left.y, right.y, factor);
-  out.u0 = interpolate(left.u0, right.u0, factor);
-  out.u1 = interpolate(left.u1, right.u1, factor);
-  out.u2 = interpolate(left.u2, right.u2, factor);
-  out.u3 = interpolate(left.u3, right.u3, factor);
+  return NO_INTERSECT;
 }
 
 void raytrace(long double xobs, long double yobs, long double iobs,
@@ -60,7 +62,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   long double fact1, fact2, fact3;
   long double t, r, th, phi;
   long double kt, kr, kth, kphi;
-  long double rau, thau, phiau, kthau;
+  long double rau, thau, phiau, krau, kthau;
   long double kyem;
   long double const0, const1;
   long double v1, v2;
@@ -183,7 +185,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   long double g5 = -9.0 / 50.0;
   long double g6 = 2.0 / 55.0;
   SurfacePoint spi;
-  long double hc=0.0;
+  long double prevh=-1.0;
   do {
     iter++;
     vars[0] = r;
@@ -191,7 +193,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     vars[2] = phi;
     vars[3] = kr;
     vars[4] = kth;
-
+//evolve the system one step such that the error stays below certain limits. For this, adaptively increase or decrease step size
     do {
       check = 0;
 
@@ -265,160 +267,137 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         h *= 2.0;
 
     } while (check == 1);
-    hc += check==-1? h /2.0 : h;
+    //std::cout << h << std::endl;
+
     /* ----- solutions to the fourth-order RKN method ----- */
-
+//apply the new step to the variables
+    rau = r;
     thau = th;
+    phiau = phi;
+    krau = kr;
+    kthau = kth;
+
+    r = vars_4th[0];
     th = vars_4th[1];
+    phi = vars_4th[2];
+    kr = vars_4th[3];
+    kth = vars_4th[4];
 
-//    if (cos(th) < 0.0) {
-//      check2 = 1;
-//      if (fabs(th - thau) <= thtol) count++;
-//
-//      if (count > 0) {
-//        rau = r;
-//        phiau = phi;
-//
-//        kthau = kth;
-//
-//        r = vars_4th[0];
-//        phi = vars_4th[2];
-//
-//        kr = vars_4th[3];
-//        kth = vars_4th[4];
-//
-//        intersection(rau, thau, phiau, r, th, phi, xem);
-//
-//        if (xem[1] > rin && xem[1] < disk_length_combined) {
-//          long double x1, y1, z1, x2, y2, z2, xyd, zd;
-//
-//          x1 = r * sin(th) * cos(phi);
-//          y1 = r * sin(th) * sin(phi);
-//          z1 = r * cos(th);
-//          x2 = rau * sin(thau) * cos(phiau);
-//          y2 = rau * sin(thau) * sin(phiau);
-//          z2 = rau * cos(thau);
-//          xyd = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-//          zd = fabs(z2 - z1);
-//          // printf("success\n");
-//          stop_integration = 1;
-//          break; /* the photon hits the disk */
-//        } else
-//          stop_integration = 2; /* the photon misses the disk */
-//      } else {
-//        th = thau;
-//        h /= 2.;
+    Delta = r * r - 2.0 * r + spin2;
+//check if the new position ends the integration
+    if (Delta < 1.e-3) {
+      stop_integration = 4; // printf("photon crosses the horizon\n"); /* the
+                            // photon crosses the horizon */
+      break;
+    }
+    if (r < 1.0) {
+      stop_integration = 5; // printf("photon crosses the horizon\n"); /* the
+                            // photon crosses the horizon */
+      break;
+    }
+
+    if (r != r) {
+      stop_integration = 6; // printf("numerical problem\n");          /*
+                            // numerical problems! */
+      break;
+    }
+
+    if (r > 1.05 * dobs) {
+      stop_integration = 7; // printf("photon escaped to infinity\n");   /* the
+                            // photon escapes to infinity */
+      break;
+    }
+    if (iter > MAX_ITER) {
+      stop_integration = 255;
+      break;
+    }
+//check if the new position intersects the accretion disk
+    //convert coordinates of current and previous position via BL-cartesian conversion
+    long double xcoord = std::sqrt(r * r + spin2) * sin(th);
+    long double ycoord = r * cos(th);
+    long double xcoordprev = std::sqrt(rau * rau + spin2) * sin(thau);
+    long double ycoordprev = rau * cos(thau);
+    SurfacePoint spia, spib;
+    int resa = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
+        diskdata, ddsize, spia, false);
+    int resb = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
+        diskdata, ddsize, spib, true);
+    int res=NO_INTERSECT;
+    int index=0;
+    resb = NO_INTERSECT;
+    if (resa == INTERSECT && resb == INTERSECT) {
+      long double dista = std::sqrt(
+      SQR(spia.x-xcoordprev) + SQR(spia.y - ycoordprev));
+      long double distb = std::sqrt(
+      SQR(spib.x-xcoordprev) + SQR(spib.y - ycoordprev));
+      if (dista < distb) {
+        res = resa;
+        spi = spia;
+        index = 1;
+      } else {
+        res = resb;
+        spi = spib;
+        index = 128;
+      }
+    } else if (resa == INTERSECT) {
+      res = resa;
+      spi = spia;
+      index = 1;
+    } else if (resb == INTERSECT) {
+      res = resb;
+      spi = spib;
+      index = 128;
+    } else {
+      index = 0;
+      res = NO_INTERSECT;
+    }
+    //deal with (possible) intersection
+//    if((cos(th))<0.0){
+//      if(r>6.0&&r<50.0){
+//        stop_integration = 1;
 //      }
-//    } else {
-//      rau = r;
-//      phiau = phi;
-//
-//      kthau = kth;
-//
-//      r = vars_4th[0];
-//      phi = vars_4th[2];
-//
-//      kr = vars_4th[3];
-//      kth = vars_4th[4];
 //    }
-
-    long double xcoord = std::sqrt(r*r + spin2) * sin(th);
-    long double ycoord = std::sqrt(r*r + spin2) * cos(th);
-    long double ycoordprev = std::sqrt(rau*rau + spin2) * cos(thau);
-    get_interpolated_sp(xcoord, diskdata, ddsize, spi);
-    //if(ycoord <= spi.y/10.0 || ycoord >= -spi.y/10.0) {
-#define DEBUG_DIV 1000000.0
-    if((ycoord <= spi.y/DEBUG_DIV && ycoordprev > spi.y/DEBUG_DIV) || (ycoord >= -spi.y/DEBUG_DIV && ycoordprev < -spi.y/DEBUG_DIV)) {
-    //if ((ycoord >= 0 && ycoord < spi.y/10.0) || (ycoord < 0 && ycoord > -spi.y/10.0)) {
-      check2 = 1;
-      if (fabs(th - thau) <= thtol && fabs(r-rau) <= rtol)
+#ifndef xxx
+    if (res == INTERSECT) {
+     // std::cout << "int" << std::endl;
+      if(check2!=1){
+        prevh = h;
+      }
+      check2 = 1;//don't adapt stepsize anymore, this is now done manually to reach certain tolerances
+      if (fabs(th - thau) <= thtol && fabs(r - rau) <= rtol) {
         count++;
-
+      }
       if (count > 0) {
-        rau = r;
-        phiau = phi;
-
-        kthau = kth;
-
-        r = vars_4th[0];
-        phi = vars_4th[2];
-
-        kr = vars_4th[3];
-        kth = vars_4th[4];
-
-        // if both left and right have height zero, the photon misses the disk,
-        // if the the intersection coordinate is negative, the photon also misses the disk
-        // otherwise it does not.
-
-        //intersection(rau, thau, phiau, r, th, phi, xem);
-
+        //if(xcoord>=6.0&&xcoord<=50.0){
         if (spi.y > 0.0 && spi.x > 0.0) {
           // next step is redshift calculation with data from the intersection
           // point. we also need the interpolated 4-vel etc
-//          long double x1, y1, z1, x2, y2, z2, xyd, zd;
-//
-//          x1 = r * sin(th) * cos(phi);
-//          y1 = r * sin(th) * sin(phi);
-//          z1 = r * cos(th);
-//          x2 = rau * sin(thau) * cos(phiau);
-//          y2 = rau * sin(thau) * sin(phiau);
-//          z2 = rau * cos(thau);
-//          xyd = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-//          zd = fabs(z2 - z1);
-          // printf("success\n");
-          stop_integration = 1;
+          stop_integration = index;
           //break; /* the photon hits the disk */
-        } else
-          stop_integration = 2; /* the photon misses the disk */
-        // this is a simplification, we can only be sure about the final
-        // whereabouts of the photon if it ends up beyond the event horizon ore
-        // is ejected to infinity
+        } else {
+          check2 = 0;
+          count = 0;
+          h = prevh;
+          //std::cout << "reset" << std::endl;
+          // this is a simplification, we can only be sure about the final
+          // whereabouts of the photon if it ends up beyond the event horizon ore
+          // is ejected to infinity
+          //stop_integration = 2; /* the photon misses the disk */
+        }
+
       } else {
-        th = thau;
         r = rau;
-        hc -= check==-1? h / 2.0 : h;
-        h /= 2.;
-        //std::cout << h << std::endl;
+        th = thau;
+        phi = phiau;
+        kr = krau;
+        kth = kthau;
+        h /= 2.0;
       }
-    } else {
-      rau = r;
-      phiau = phi;
-
-      kthau = kth;
-
-      r = vars_4th[0];
-      phi = vars_4th[2];
-
-      kr = vars_4th[3];
-      kth = vars_4th[4];
     }
-
-    Delta = r * r - 2. * r + spin2;
-
-    if (Delta < 1.e-3)
-      stop_integration = 4; // printf("photon crosses the horizon\n"); /* the
-                            // photon crosses the horizon */
-
-    if (r < 1.)
-      stop_integration = 5; // printf("photon crosses the horizon\n"); /* the
-                            // photon crosses the horizon */
-
-    if (r != r)
-      stop_integration = 6; // printf("numerical problem\n");          /*
-                            // numerical problems! */
-
-    if (r > 1.05 * dobs)
-      stop_integration = 7; // printf("photon escaped to infinity\n");   /* the
-                            // photon escapes to infinity */
-    if (iter > 10000)
-      stop_integration = 255;
-//    if(stop_integration!=0){
-//      std::cout << "int cond " << stop_integration << std::endl;
-//      std::cout << "Iter " << iter << std::endl;
-//    }
+#endif
   } while (stop_integration == 0);
 
-  if (stop_integration == 1) {
+  if (stop_integration == 1 || stop_integration == 128) {
     xem[1] = r;
     //we also need the density at the point of the hit... for what????
 
@@ -434,11 +413,12 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   } else {
     xem[1] = 0.0;
     gfactor = 0.0;
+    cosem = 0.0;
   }
   hit.cosem = cosem;
   hit.r = xem[1];
   hit.gfactor = gfactor;
-  hit.hc = hc;
+  hit.hc = 0.0;
 //  traces[0] = xem[1];
 //  traces[1] = cosem;
 //  // traces[2] = xem[3];

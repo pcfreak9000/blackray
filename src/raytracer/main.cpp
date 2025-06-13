@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Error: Malformed line - " << line << std::endl;
       continue;
     }
-
+    dp.y = dp.y<0.0?0.0:dp.y;
     diskdata.push_back(dp);
   }
 
@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
 
       raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition, diskdata.data(), diskdata.size());
 
-      if (stop_integration_condition == 1) {
+      if (stop_integration_condition == 1 || stop_integration_condition==128) {
         fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", photon_index, xobs,
                 yobs, hit.r, hit.gfactor, hit.cosem);
 

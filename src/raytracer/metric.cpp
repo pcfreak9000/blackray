@@ -42,4 +42,5 @@ void metric(long double r, long double th, long double mn[][4]) {
   mn[2][2] = g_thth;
   mn[3][0] = mn[0][3];
   mn[3][3] = g_pp;
+
 }
