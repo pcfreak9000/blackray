@@ -1,4 +1,4 @@
-#define DEBUG_DIV 1000.0
+#define DEBUG_DIV 10.0
 #define MAX_ITER 3000
 #define NO_INTERSECT -1
 #define INTERSECT 0
@@ -13,6 +13,17 @@ long double interpolate(long double a, long double b, long double f) {
 long double checkIntersect(long double x1, long double y1, long double x2,
     long double y2, long double x3, long double y3, long double x4,
     long double y4) {
+  long double axl = std::min(x1, x2);
+  long double axh = std::max(x1, x2);
+  long double ayl = std::min(y1, y2);
+  long double ayh = std::max(y1, y2);
+  long double bxl = std::min(x3, x4);
+  long double bxh = std::max(x3, x4);
+  long double byl = std::min(y3, y4);
+  long double byh = std::max(y3, y4);
+  if (!(axl < bxh && axh > bxl && ayl < byh && ayh > byl)) {
+    return NO_INTERSECT;
+  }
   long double num = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
   long double denum = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
   long double t = num / denum;
@@ -33,12 +44,12 @@ int get_interpolated_sp(const long double x1, const long double y1,
     long double mul = mirrory ? -1 : 1;
     long double pt = checkIntersect(p0.x, mul * p0.y / DEBUG_DIV, p1.x,
         mul * p1.y / DEBUG_DIV, x1, y1, x2, y2);
-    int intersects = 0;
     if (pt != NO_INTERSECT) {
       long double xi = p0.x + pt * (p1.x - p0.x);
       long double yi = mul * (p0.y + pt * (p1.y - p0.y));
       out.x = xi;
       out.y = yi / DEBUG_DIV;
+      //should be zero if either p is zero because linear interpolation of these velocities at that place is probably not physically
       out.u0 = interpolate(p0.u0, p1.u0, pt);
       out.u1 = interpolate(p0.u1, p1.u1, pt);
       out.u2 = interpolate(p0.u2, p1.u2, pt);
@@ -91,7 +102,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   errmax = 1.0e-6;
   atol = 1.0e-10;
   //rtol = 1.0e-10;
-  rtol = 1.0e-8;
+  rtol = 1.0e3;
   long double thtol = 1.0e-8;
   int count, iter;
 
@@ -185,7 +196,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   long double g5 = -9.0 / 50.0;
   long double g6 = 2.0 / 55.0;
   SurfacePoint spi;
-  long double prevh=-1.0;
+  long double prevh = -1.0;
   do {
     iter++;
     vars[0] = r;
@@ -261,9 +272,12 @@ void raytrace(long double xobs, long double yobs, long double iobs,
           check = -1;
       }
 
-      if (check == 1)
+      if (check == 1) {
         h /= 2.0;
-      else if (check == -1)
+        if (iter > MAX_ITER - 10) {
+          std::cout << "descale0" << std::endl;
+        }
+      } else if (check == -1)
         h *= 2.0;
 
     } while (check == 1);
@@ -285,7 +299,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
     Delta = r * r - 2.0 * r + spin2;
 //check if the new position ends the integration
-    if (Delta < 1.e-3) {
+    if (Delta < 1.0e-3) {
       stop_integration = 4; // printf("photon crosses the horizon\n"); /* the
                             // photon crosses the horizon */
       break;
@@ -307,10 +321,23 @@ void raytrace(long double xobs, long double yobs, long double iobs,
                             // photon escapes to infinity */
       break;
     }
+
+    if (iter > MAX_ITER - 10) {
+      std::cout << h << " " << iter << std::endl;
+      std::cout << r << " " << th << " " << phi << std::endl;
+      std::cout << rau << " " << thau << " " << phiau << std::endl;
+    }
+
     if (iter > MAX_ITER) {
       stop_integration = 255;
       break;
     }
+//    if(r>10000.0){
+//      check2 = 0;
+//      count = 0;
+//      continue;
+//    }
+
 //check if the new position intersects the accretion disk
     //convert coordinates of current and previous position via BL-cartesian conversion
     long double xcoord = std::sqrt(r * r + spin2) * sin(th);
@@ -322,9 +349,9 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         diskdata, ddsize, spia, false);
     int resb = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
         diskdata, ddsize, spib, true);
-    int res=NO_INTERSECT;
-    int index=0;
-    resb = NO_INTERSECT;
+    int res = NO_INTERSECT;
+    int index = 0;
+    //resb = NO_INTERSECT;
     if (resa == INTERSECT && resb == INTERSECT) {
       long double dista = std::sqrt(
       SQR(spia.x-xcoordprev) + SQR(spia.y - ycoordprev));
@@ -352,24 +379,21 @@ void raytrace(long double xobs, long double yobs, long double iobs,
       res = NO_INTERSECT;
     }
     //deal with (possible) intersection
-//    if((cos(th))<0.0){
-//      if(r>6.0&&r<50.0){
-//        stop_integration = 1;
-//      }
-//    }
 #ifndef xxx
     if (res == INTERSECT) {
-     // std::cout << "int" << std::endl;
-      if(check2!=1){
+      if (iter > MAX_ITER - 10) {
+        std::cout << "int" << std::endl;
+      }
+      if (check2 != 1) {
         prevh = h;
       }
-      check2 = 1;//don't adapt stepsize anymore, this is now done manually to reach certain tolerances
-      if (fabs(th - thau) <= thtol && fabs(r - rau) <= rtol) {
+      check2 = 1; //don't adapt stepsize anymore, this is now done manually to reach certain tolerances
+      if (fabs(th - thau) <= thtol) {
         count++;
       }
       if (count > 0) {
         //if(xcoord>=6.0&&xcoord<=50.0){
-        if (spi.y > 0.0 && spi.x > 0.0) {
+        if (std::abs(spi.y) > 0.0 && spi.x > 0.0) {
           // next step is redshift calculation with data from the intersection
           // point. we also need the interpolated 4-vel etc
           stop_integration = index;
@@ -392,6 +416,9 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         kr = krau;
         kth = kthau;
         h /= 2.0;
+        if (iter > MAX_ITER - 10) {
+          std::cout << "descale1" << std::endl;
+        }
       }
     }
 #endif
