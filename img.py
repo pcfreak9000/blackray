@@ -51,7 +51,7 @@ def main(input_file, output_image, size=256, use_labels=False):
     else:
         # Grayscale mode: 1 - normalized(data)
         d_inverted = 1 - normalize_column(d_raw)
-        grid_d = griddata((x_norm, 1-y_norm), d_inverted, (grid_x, grid_y), method='cubic', fill_value=0)
+        grid_d = griddata((x_norm, 1-y_norm), 1 - d_inverted, (grid_x, grid_y), method='cubic', fill_value=0)
         plt.imsave(output_image, grid_d, cmap='gray', vmin=0, vmax=1)
 
 if __name__ == "__main__":
