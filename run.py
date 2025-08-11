@@ -14,9 +14,9 @@ gamma = 1.8
 afe = 1
 logxi = 1.
 ecut = 300
-incl = 50
+incl = -70.0
 
-spin = 0.0
+spin = 0.998
 a13 = 0
 a22 = 0
 epsi3 = 0

@@ -22,7 +22,8 @@ int phicount;
 struct SurfacePoint {
   long double x;
   long double y;
-  long double u0, u1, u2, u3;            
+  long double u0, u1, u2, u3;
+  long double density;
 };
 
 struct RayHit {

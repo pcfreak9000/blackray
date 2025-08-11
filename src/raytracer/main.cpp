@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     std::istringstream iss(line);
     SurfacePoint dp;
 
-    if (!(iss >> dp.x >> dp.y >> dp.u0 >> dp.u1 >> dp.u2 >> dp.u3)) {
+    if (!(iss >> dp.x >> dp.y >> dp.density >> dp.u0 >> dp.u1 >> dp.u2 >> dp.u3)) {
       std::cerr << "Error: Malformed line - " << line << std::endl;
       continue;
     }
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
           }
         }
       } else {
-        tmpOutFile << xobs << " " << yobs << " " << 0.0 << " " << stop_integration_condition << " " << hit.hc << std::endl;
+        tmpOutFile << xobs << " " << yobs << " " << 1.0 << " " << stop_integration_condition << " " << hit.hc << std::endl;
       }
     }
 

@@ -50,6 +50,10 @@ int get_interpolated_sp(const long double x1, const long double y1,
       out.x = xi;
       out.y = yi / DEBUG_DIV;
       //should be zero if either p is zero because linear interpolation of these velocities at that place is probably not physically
+      out.density = interpolate(p0.density, p1.density, pt);
+//      if(out.density == 0.0){
+//        return NO_INTERSECT;
+//      }
       out.u0 = interpolate(p0.u0, p1.u0, pt);
       out.u1 = interpolate(p0.u1, p1.u1, pt);
       out.u2 = interpolate(p0.u2, p1.u2, pt);
@@ -432,14 +436,29 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     //which is (1,0,0,0), and the interpolated 4-vel of the disk. With this, we can calculate the gfactor.
     //do we need the metric or is it contained in the kvector already???
     //redshift(xem[1], const1, gfactor);
-    gfactor = kt0
-        / (kt0 * spi.u0 + kr * spi.u1 + kth * spi.u2 + kphi0 * spi.u3);
+    metric(r, th, met);
+    long double met0[4][4];
+    metric(r0,th0,met0);
+    long double karray[4] = {kt0, kr, kth, kphi0};
+    long double uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
+    long double obsuarray[4] = {1.0, 0.0, 0.0, 0.0};
+    long double obskarray[4] = {kt0, kr0, kth0, kphi0};
+    long double sum = 0.0;
+    long double obssum = 0.0;
+    for(int i=0; i<4; i++){
+      for(int j=0; j<4; j++){
+        sum += met[i][j] * karray[j] * uarray[i];
+        obssum += met0[i][j] * obskarray[j] * obsuarray[i];
+      }
+    }
 
+    //-kt0 * spi.u0 + kr * spi.u1 + kth * spi.u2 + kphi0 * spi.u3
+    gfactor = obssum / sum;
     /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
     cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
   } else {
-    xem[1] = 0.0;
-    gfactor = 0.0;
+    xem[1] = r;
+    gfactor = 1.0;
     cosem = 0.0;
   }
   hit.cosem = cosem;
