@@ -71,8 +71,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
     int &stop_integration, const SurfacePoint *diskdata, const size_t ddsize);
 void diffeqs(long double b, long double vars[], long double diffs[]);
-void redshift(long double r, long double ktkp, long double& gg, long double& Omega, long double& uet);
-//void redshift(long double r, long double ktkp, long double &gg);
+void redshift(long double r, long double ktkp, long double &gg);
 // void redshift_polish_doughnut(long double r, long double th, long double l
 // ,long double ktkp, long double& gg);
 void intersection(long double x_1, long double y_1, long double z_1,

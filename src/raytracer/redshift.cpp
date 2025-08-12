@@ -1,9 +1,9 @@
-void redshift(long double r, long double ktkp, long double& gg, long double& Omega, long double& uet) {
+void redshift(long double r, long double ktkp, long double& gg) {
   /* I have to write this function new for the case of Polish doughnut model.*/
   /* Using equation 6.22 Cosimo's Book, and Ut and OMEGA from E.5 and E.6
    * respectively */
-  //long double Omega;
-  //long double uet;
+  long double Omega;
+  long double uet;
   long double met[4][4], met_rder[4][4];
   long double th = Pi / 2;
 
