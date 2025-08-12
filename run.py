@@ -14,17 +14,17 @@ gamma = 1.8
 afe = 1
 logxi = 1.
 ecut = 300
-incl = -70.0
+incl = 70.0
 
-spin = 0.998
+spin = 0.0
 a13 = 0
 a22 = 0
 epsi3 = 0
 a52 = 0
 alpha = -3
 
-Nr = 200 #1000
-Nph = 80 #400
+Nr = 100 #1000
+Nph = 40 #400
 Rmax = 80
 rstep  = np.e**((np.log(Rmax)-np.log(np.cos(np.pi*incl/180)))/Nr);
 pstep  = 2*np.pi/Nph;

@@ -5,6 +5,10 @@
 #include <vector>
 #include <sstream>
 
+QuadTree::QuadTree(Real x, Real y, Real width, Real height) :
+    x(x), y(y), width(width), height(height), myelemsize(1),myelements(nullptr),max_elements(4),is_leaf(true) {
+}
+
 int main(int argc, char *argv[]) {
   std::cout << "Setting up raytracer..." << std::endl;
   long double spin2;
@@ -37,7 +41,7 @@ int main(int argc, char *argv[]) {
   FILE *foutput;
   FILE *foutput_coord;
 
-  const char* diskdatafile = argv[10];
+  const char *diskdatafile = argv[10];
   std::ifstream disk(diskdatafile);
   if (!disk) {
     std::cerr << "Error: Could not open file!" << std::endl;
@@ -56,7 +60,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Error: Malformed line - " << line << std::endl;
       continue;
     }
-    dp.y = dp.y<0.0?0.0:dp.y;
+    dp.y = dp.y < 0.0 ? 0.0 : dp.y;
     diskdata.push_back(dp);
   }
 
@@ -64,10 +68,9 @@ int main(int argc, char *argv[]) {
   /* ----- Set free parameters ----- */
 
   // Input parameters: spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep
-
   spin = atof(argv[1]);
   iobs_deg = atof(argv[2]); /*inclination angle in degrees*/
-  a13 = atof(argv[3]);      /* deformation parameters */
+  a13 = atof(argv[3]); /* deformation parameters */
   a22 = atof(argv[4]);
   a52 = atof(argv[5]);
   epsi3 = atof(argv[6]);
@@ -83,8 +86,8 @@ int main(int argc, char *argv[]) {
   /* ----- Set model for the spectral line ----- */
 
   E_line = 6.4; /* energy rest of the line in keV */
-  N_0 = 1.0;    /* normalization */
-                // alpha  = -3;     radial power law index
+  N_0 = 1.0; /* normalization */
+  // alpha  = -3;     radial power law index
 
   /* ----- Set inner and outer radius of the disk ----- */
 
@@ -105,8 +108,7 @@ int main(int argc, char *argv[]) {
   rstep2 = (rstep - 1) / rstep;
   // pstep  = 2*Pi/720;
 
-  E_obs[0] =
-      0.0125000002; /* minimum photon energy detected by the observer; in keV */
+  E_obs[0] = 0.0125000002; /* minimum photon energy detected by the observer; in keV */
   N_obs[0] = 0;
   for (i = 1; i <= imax - 1; i++) {
     E_obs[i] = E_obs[i - 1] + 0.025;
@@ -116,26 +118,23 @@ int main(int argc, char *argv[]) {
   /*Iron line output file*/
   // sprintf(filename_o,"iron_a%.03f.epsilon_r%.02f.epsilon_t%.02f.i%.02f.dat",spin,epsi3,iobs_deg);
   // sprintf(filename_o,"ironline_data/iron_a%.05Le.i%.02Le.e_%.02Le.a13_%.02Le.a22_%.02Le.a52_%.02Le.dat",spin,iobs_deg,epsi3,a13,a22,a52);
-  snprintf(
-      filename_o, sizeof(filename_o),
-      "ironline_data/"
+  snprintf(filename_o, sizeof(filename_o), "ironline_data/"
       "iron_a_%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%.05Lf.dat",
       spin, iobs_deg, epsi3, a13, a22, a52);
 
   /*photon data output file*/
   // sprintf(filename_o2,"coord_a%.03f.epsilon_r%.02f.epsilon_t%.02f.i%.02f.dat",spin,epsi3,iobs_deg);
-  snprintf(filename_o2, sizeof(filename_o2),
-           "data/"
-           "photons_data_a%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%."
-           "05Lf.dat",
-           spin, iobs_deg, epsi3, a13, a22, a52);
+  snprintf(filename_o2, sizeof(filename_o2), "data/"
+      "photons_data_a%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%."
+      "05Lf.dat", spin, iobs_deg, epsi3, a13, a22, a52);
 
   foutput_coord = fopen(filename_o2, "w");
   std::ofstream tmpOutFile("output.txt");
   std::cout << "Starting raytracing loop" << std::endl;
   /* ----- assign photon position in the grid ----- */
   for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
-    std::cout << "Raytracing: " << (robs-robs_i)/(robs_f-robs_i) << std::endl;
+    std::cout << "Raytracing: " << (robs - robs_i) / (robs_f - robs_i)
+        << std::endl;
 
     for (i = 0; i <= imax - 1; i++)
       fphi[i] = 0;
@@ -147,18 +146,20 @@ int main(int argc, char *argv[]) {
       /*entering in raytrace_new.cpp*/
 
       // printf("entering in the raytrace part of the code\n");
+      raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition,
+          diskdata.data(), diskdata.size());
 
-      raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition, diskdata.data(), diskdata.size());
-
-      if (stop_integration_condition == 1 || stop_integration_condition==128) {
+      if (stop_integration_condition == 1
+          || stop_integration_condition == 128) {
         fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", photon_index, xobs,
-                yobs, hit.r, hit.gfactor, hit.cosem);
+            yobs, hit.r, hit.gfactor, hit.cosem);
 
         photon_index++;
 
         gfactor = hit.gfactor;
         pp = gfactor * E_line;
-        tmpOutFile << xobs << " " << yobs << " " << gfactor << " " << stop_integration_condition << " " << hit.hc << std::endl;
+        tmpOutFile << xobs << " " << yobs << " " << gfactor << " "
+            << stop_integration_condition << " " << hit.hc << std::endl;
 
         /* --- integration - part 1 --- */
 
@@ -171,7 +172,8 @@ int main(int argc, char *argv[]) {
           }
         }
       } else {
-        tmpOutFile << xobs << " " << yobs << " " << 1.0 << " " << stop_integration_condition << " " << hit.hc << std::endl;
+        tmpOutFile << xobs << " " << yobs << " " << 1.0 << " "
+            << stop_integration_condition << " " << hit.hc << std::endl;
       }
     }
 

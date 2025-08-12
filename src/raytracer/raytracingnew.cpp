@@ -1,10 +1,6 @@
 #define DEBUG_DIV 10.0
 #define MAX_ITER 3000
-#define NO_INTERSECT -1
-#define INTERSECT 0
-#define TOO_MANY_INTERSECT -2
 
-#define SQR(x) ((x)*(x))
 
 long double interpolate(long double a, long double b, long double f) {
   return (1.0 - f) * a + f * b;
@@ -49,11 +45,11 @@ int get_interpolated_sp(const long double x1, const long double y1,
       long double yi = mul * (p0.y + pt * (p1.y - p0.y));
       out.x = xi;
       out.y = yi / DEBUG_DIV;
-      //should be zero if either p is zero because linear interpolation of these velocities at that place is probably not physically
       out.density = interpolate(p0.density, p1.density, pt);
 //      if(out.density == 0.0){
 //        return NO_INTERSECT;
 //      }
+      //should be zero if either p is zero because linear interpolation of these velocities at that place is probably not physically
       out.u0 = interpolate(p0.u0, p1.u0, pt);
       out.u1 = interpolate(p0.u1, p1.u1, pt);
       out.u2 = interpolate(p0.u2, p1.u2, pt);
@@ -427,7 +423,6 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     }
 #endif
   } while (stop_integration == 0);
-
   if (stop_integration == 1 || stop_integration == 128) {
     xem[1] = r;
     //we also need the density at the point of the hit... for what????
@@ -435,25 +430,29 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     //to calculate the redshift, we need the photon momentum k (which is present with kr and kth, kt=-E=kt0, kphi=L=kphi0) the observer 4-vel,
     //which is (1,0,0,0), and the interpolated 4-vel of the disk. With this, we can calculate the gfactor.
     //do we need the metric or is it contained in the kvector already???
-    //redshift(xem[1], const1, gfactor);
     metric(r, th, met);
     long double met0[4][4];
     metric(r0,th0,met0);
-    long double karray[4] = {kt0, kr, kth, kphi0};
-    long double uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
+    //#define CUBE(x) ((x)*(x)*(x))
+    //Real x = std::sqrt(r);
+    //Real p_ut = (0.0 + CUBE(x))/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
+    //Real p_uph = 1/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
+    long double karray[4] = {kt0, kr0, kth0, kphi0};//TODO kr0 or kr? kth0 or kth?
+    long double uarray[4] = {spi.u0, spi.u1,spi.u2, spi.u3};
+    //long double uarray[4] = {p_ut,0.0,0.0,p_uph};
     long double obsuarray[4] = {1.0, 0.0, 0.0, 0.0};
-    long double obskarray[4] = {kt0, kr0, kth0, kphi0};
+    long double obskarray[4] = {kt0, kr0, kth0, kphi0};//TODO kr0 or kr? kth0 or kth?
     long double sum = 0.0;
     long double obssum = 0.0;
     for(int i=0; i<4; i++){
       for(int j=0; j<4; j++){
-        sum += met[i][j] * karray[j] * uarray[i];
+        sum += met0[i][j] * karray[j] * uarray[i];
         obssum += met0[i][j] * obskarray[j] * obsuarray[i];
       }
     }
-
-    //-kt0 * spi.u0 + kr * spi.u1 + kth * spi.u2 + kphi0 * spi.u3
+    //gfactor = kt0/(kt0 * spi.u0 + kr * spi.u1 + kth * spi.u2 + kphi0 * spi.u3);
     gfactor = obssum / sum;
+    //redshift(xem[1], const1, gfactor);
     /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
     cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
   } else {

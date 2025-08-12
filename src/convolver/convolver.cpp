@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 
     r = r_disk;
     g = gfactor;
-    ctheta = cosne;
+    // ctheta = cosne;
     ctheta = cos(iobs);
     rsquare = xobs * xobs + yobs * yobs;
     get_local_spec(xill_spec, xill_spec_interpolated, ctheta, xill_n_ener);

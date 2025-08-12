@@ -26,6 +26,11 @@ struct SurfacePoint {
   long double density;
 };
 
+struct SurfaceElement {
+  SurfacePoint sp0;
+  SurfacePoint sp1;
+};
+
 struct RayHit {
   long double cosem;
   long double gfactor;
@@ -33,18 +38,45 @@ struct RayHit {
   long double hc;
 };
 
+using Real = long double;
+#define Q1 0
+#define Q2 1
+#define Q3 2
+#define Q4 3
+#define NO_INTERSECT -1
+#define INTERSECT 0
+#define SQR(x) ((x)*(x))
+
+class QuadTree {
+public:
+  QuadTree(Real x, Real y, Real width, Real height);
+  int check_intersect(Real x1, Real y1, Real x2, Real y2,
+      SurfaceElement *intersect);
+  void put_element(SurfaceElement *element);
+private:
+  QuadTree *subtrees[4];
+  Real x, y, width, height;
+  SurfaceElement **myelements;
+  size_t myelemsize;
+  size_t max_elements;
+  bool is_leaf;
+//  bool is_root;
+
+  void subdivide();
+
+};
 /*-----------------------------------------------------------*/
 
 void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
     int &stop_integration, const SurfacePoint *diskdata, const size_t ddsize);
 void diffeqs(long double b, long double vars[], long double diffs[]);
-void redshift(long double r, long double ktkp, long double &gg);
+void redshift(long double r, long double ktkp, long double& gg, long double& Omega, long double& uet);
+//void redshift(long double r, long double ktkp, long double &gg);
 // void redshift_polish_doughnut(long double r, long double th, long double l
 // ,long double ktkp, long double& gg);
 void intersection(long double x_1, long double y_1, long double z_1,
-                  long double x_2, long double y_2, long double z_2,
-                  long double x_d[]);
+    long double x_2, long double y_2, long double z_2, long double x_d[]);
 void metric(long double z1, long double z2, long double mn[][4]);
 void metric_rderivatives(long double z1, long double z2, long double dmn[][4]);
 void find_isco(long double z1, long double &isco);
