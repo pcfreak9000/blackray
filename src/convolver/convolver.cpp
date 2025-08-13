@@ -188,6 +188,7 @@ int main(int argc, char *argv[]) {
 
   FILE *foutput;
   foutput = fopen(out_file, "w");
+  if(foutput==nullptr) std::cerr << "Problems with output file!" << std::endl;
 
   for (int i = 0; i < number_of_bins; i++) {
     // xspec format

@@ -32,10 +32,12 @@ pstep  = 2*np.pi/Nph;
 # ----------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------
 
-rt_command = "./rt %f %f %f %f %f %f %f %f %f %s"%(spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep, path_to_disk_data_file)
+rt_command = "ulimit -c unlimited && ./rt %f %f %f %f %f %f %f %f %f %s"%(spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep, path_to_disk_data_file)
 # os.system("cd raytracer/")
 print("Start of ray-tracing part ...")
-os.system(rt_command)
+dddd = os.system(rt_command)
+if dddd != 0:
+    print(dddd)
 print("End of ray-tracing part")
 
 xillver_command = "python get_xillver_spectrum.py %f %f %f %f %f %s"%(gamma, afe, logxi, ecut, incl, path_to_xillver_file)
@@ -48,5 +50,7 @@ final_filename = "output/spectrum_a_%.5f_i_%.3f_a13_%.5f_a22_%.5f_gam_%.2f_afe_%
 xill_spec_filename = "data/xill_spec_gam_%.2f_afe_%.2f_xi_%.2f_ecut_%.2f_incl_%.2f.dat" % (gamma, afe, logxi, ecut, incl)
 convolver_command = "./conv %s %s %s %f %f %f %f" % (photons_data_filename, xill_spec_filename, final_filename, incl, logxi, alpha, rstep)
 print("Start of convolution ...")
-os.system(convolver_command)
+aaaa = os.system(convolver_command)
+if aaaa != 0:
+    print(aaaa)
 print("End of convolution! The resulting spectrum is in output/")

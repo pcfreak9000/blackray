@@ -30,6 +30,7 @@ struct SurfacePoint {
 struct SurfaceElement {
   SurfacePoint *sp0;
   SurfacePoint *sp1;
+  int index;
 };
 
 struct RayHit {
@@ -47,6 +48,8 @@ using Real = long double;
 #define NO_INTERSECT -1
 #define INTERSECT 0
 #define SQR(x) ((x)*(x))
+#define DEBUG_DIV 10.0
+#define MAX_ITER 3000
 
 class QuadTree {
 public:
@@ -54,16 +57,19 @@ public:
   Real check_intersect(Real x1, Real y1, Real x2, Real y2,
       SurfaceElement *&intersect);
   void put_element(SurfaceElement *element);
+  void validate();
 private:
-  vector<QuadTree*> subtrees;
-  vector<SurfaceElement*> myelements;
+  std::vector<QuadTree*> subtrees;
+  std::vector<SurfaceElement*> myelements;
   Real x, y, width, height;
   size_t max_elements;
   bool is_leaf;
+  size_t level;
 //  bool is_root;
 
   void subdivide();
   bool fits(SurfaceElement *element);
+  bool fully_inside(Real x0, Real y0, Real x1, Real y1);
 };
 /*-----------------------------------------------------------*/
 Real checkIntersect(long double x1, long double y1, long double x2,
@@ -71,7 +77,7 @@ Real checkIntersect(long double x1, long double y1, long double x2,
     long double y4);
 void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
-    int &stop_integration, const SurfacePoint *diskdata, const size_t ddsize);
+    int &stop_integration, SurfacePoint *diskdata, const size_t ddsize, QuadTree* tree);
 void diffeqs(long double b, long double vars[], long double diffs[]);
 void redshift(long double r, long double ktkp, long double &gg);
 // void redshift_polish_doughnut(long double r, long double th, long double l

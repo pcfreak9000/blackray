@@ -8,11 +8,12 @@
 
 
 QuadTree::QuadTree(Real x, Real y, Real width, Real height) :
-    x(x), y(y), width(width), height(height), max_elements(4), is_leaf(true) {
+    x(x), y(y), width(width), height(height), max_elements(4), is_leaf(true),level(0) {
 }
 
 Real QuadTree::check_intersect(Real x1, Real y1, Real x2, Real y2, SurfaceElement*& out){
-  for(SurfaceElement* elem : myelements) {
+  for(int i=0; i<myelements.size(); i++) {
+    SurfaceElement* elem = myelements[i];
     Real res = checkIntersect(x1,y1,x2,y2,elem->sp0->x,elem->sp0->y,elem->sp1->x,elem->sp1->y);
     if(res != NO_INTERSECT) {
       out = elem;
@@ -21,13 +22,32 @@ Real QuadTree::check_intersect(Real x1, Real y1, Real x2, Real y2, SurfaceElemen
   }
   if(!is_leaf) {
     for(int i=0; i<4; i++){
-      Real ressub = subtrees[i]->check_intersect(x1,y1,x2,y2,out);
-      if(ressub != NO_INTERSECT){
-        return ressub;
+      if(subtrees[i]->fully_inside(x1,y1,x2,y2)){
+        Real ressub = subtrees[i]->check_intersect(x1,y1,x2,y2,out);
+        if(ressub != NO_INTERSECT){
+          return ressub;
+        }
+        break;
       }
     }
   }
   return NO_INTERSECT;
+}
+
+void QuadTree::validate(){
+  std::cout << "Validating..." << std::endl;
+  for(SurfaceElement* se : myelements){
+    if(!se) std::cout << level << " " << myelements.size() << "--- uh oh ---: " << se << std::endl;
+    if(!se->sp0) std::cout << level << " " << myelements.size() << " oh no 0: " << se->sp0 << std::endl;
+    if(!se->sp1) std::cout << level << " " << myelements.size() << " oh no 1: " << se->sp1 << std::endl;
+  }
+#ifdef abc
+  if(!is_leaf){
+    for(QuadTree* qt : subtrees){
+      qt->validate();
+    }
+  }
+#endif
 }
 
 bool QuadTree::fits(SurfaceElement *element) {
@@ -38,12 +58,23 @@ bool QuadTree::fits(SurfaceElement *element) {
 
   return maxx < x+width && minx >= x && maxy < y+height && miny >= y;
 }
+bool QuadTree::fully_inside(Real x0, Real y0, Real x1, Real y1) {
+  Real maxx = std::max(y0, x1);
+  Real minx = std::min(y0, x1);
+  Real maxy = std::max(y0, y1);
+  Real miny = std::min(y0, y1);
 
+  return maxx < x+width && minx >= x && maxy < y+height && miny >= y;
+}
 void QuadTree::subdivide() {
   QuadTree* q1 = new QuadTree(x+width/2.0,y+height/2.0,width/2.0,height/2.0);
   QuadTree* q2 = new QuadTree(x,y+height/2.0,width/2.0,height/2.0);
   QuadTree* q3 = new QuadTree(x,y,width/2.0,height/2.0);
   QuadTree* q4 = new QuadTree(x+width/2.0,y,width/2.0, height/2.0);
+  q1->level = this->level+1;
+  q2->level = this->level+1;
+  q3->level = this->level+1;
+  q4->level = this->level+1;
   is_leaf = false;
   subtrees.push_back(q1);
   subtrees.push_back(q2);
@@ -126,43 +157,45 @@ int main(int argc, char *argv[]) {
   std::string line;
   std::getline(disk, line); // Read and ignore the header line
 
-  std::vector<SurfacePoint> diskdata, dd2;
+  std::vector<SurfacePoint> diskdata;//, dd2;
   Real minx=1e9,maxx=0,miny=1e9,maxy=0;
   while (std::getline(disk, line)) {
     std::istringstream iss(line);
-    SurfacePoint dp,dpunder;
+    SurfacePoint dp;//,dpunder;
 
     if (!(iss >> dp.x >> dp.y >> dp.density >> dp.u0 >> dp.u1 >> dp.u2 >> dp.u3)) {
       std::cerr << "Error: Malformed line - " << line << std::endl;
       continue;
     }
     dp.y = dp.y < 0.0 ? 0.0 : dp.y;
-    dpunder = dp;
-    dpunder.y *= -1;
-    if(dp.x < minx) minx = dp.x;
-    if(dp.y < miny) miny = dp.y;
-    if(dp.x > maxx) maxx = dp.x;
-    if(dp.y > maxy) maxy = dp.y;
-    if(dpunder.y < miny) miny = dpunder.y;
-    if(dpunder.y > maxy) maxy = dpunder.y;
+    dp.y /= DEBUG_DIV;
+//    dpunder = dp;
+//    dpunder.y *= -1;
+//    if(dp.x < minx) minx = dp.x;
+//    if(dp.y < miny) miny = dp.y;
+//    if(dp.x > maxx) maxx = dp.x;
+//    if(dp.y > maxy) maxy = dp.y;
+//    if(dpunder.y < miny) miny = dpunder.y;
+//    if(dpunder.y > maxy) maxy = dpunder.y;
     diskdata.push_back(dp);
-    dd2.push_back(dpunder);
+    //dd2.push_back(&dpunder);
   }
 
   disk.close();
-  QuadTree tree(minx-1,miny-1, maxx-minx+2, maxy-miny+2);
-  for(int i=0; i<diskdata.size()-1; i++){
-    SurfaceElement elem;
-    elem.sp0 = &diskdata[i];
-    elem.sp1 = &diskdata[i+1];
-    tree.put_element(&elem);
-  }
-  for(int i=0; i<dd2.size()-1; i++){
-    SurfaceElement elem;
-    elem.sp0 = &dd2[i];
-    elem.sp1 = &dd2[i+1];
-    tree.put_element(&elem);
-  }
+//  QuadTree tree(minx-1,miny-1, maxx-minx+2, maxy-miny+2);
+//  for(int i=0; i<diskdata.size()-1; i++){
+//    SurfaceElement* elem = new SurfaceElement;
+//    elem->sp0 = diskdata[i];
+//    elem->sp1 = diskdata[i+1];
+//    tree.put_element(elem);
+//  }
+//  for(int i=0; i<dd2.size()-1; i++){
+//    SurfaceElement* elem = new SurfaceElement;
+//    elem->sp0 = dd2[i];
+//    elem->sp1 = dd2[i+1];
+//    tree.put_element(elem);
+//  }
+//  tree.validate();
 
   /* ----- Set free parameters ----- */
 
@@ -228,25 +261,23 @@ int main(int argc, char *argv[]) {
       "05Lf.dat", spin, iobs_deg, epsi3, a13, a22, a52);
 
   foutput_coord = fopen(filename_o2, "w");
+  if(foutput_coord==nullptr) std::cerr << "Problems with data file!" << std::endl;
   std::ofstream tmpOutFile("output.txt");
   std::cout << "Starting raytracing loop" << std::endl;
   /* ----- assign photon position in the grid ----- */
   for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
     std::cout << "Raytracing: " << (robs - robs_i) / (robs_f - robs_i)
         << std::endl;
-
     for (i = 0; i <= imax - 1; i++)
       fphi[i] = 0;
 
     for (pobs = 0; pobs < 2 * Pi - 0.5 * pstep; pobs = pobs + pstep) {
       xobs = robs * cos(pobs);
       yobs = robs * sin(pobs);
-
       /*entering in raytrace_new.cpp*/
-
       // printf("entering in the raytrace part of the code\n");
       raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition,
-          diskdata.data(), diskdata.size());
+          diskdata.data(), diskdata.size(), nullptr);
 
       if (stop_integration_condition == 1
           || stop_integration_condition == 128) {
@@ -275,7 +306,6 @@ int main(int argc, char *argv[]) {
             << stop_integration_condition << " " << hit.hc << std::endl;
       }
     }
-
     /* --- integration - part 2 --- */
 
     for (i = 0; i <= imax - 1; i++) {
@@ -283,18 +313,20 @@ int main(int argc, char *argv[]) {
       N_obs[i] = N_obs[i] + fr;
     }
   }
+//  tree.validate();
+
   std::cout << "Finishing..." << std::endl;
   tmpOutFile.close();
   /* --- print spectrum --- */
 
   foutput = fopen(filename_o, "w");
-  N_tot = 0.0;
+  if(foutput==nullptr) std::cerr << "Problems with iron line file!" << std::endl;
 
+  N_tot = 0.0;
   for (i = 0; i <= imax - 1; i++) {
     N_obs[i] = N_0 * N_obs[i] / E_obs[i];
     N_tot = N_tot + N_obs[i];
   }
-
   for (i = 0; i <= imax - 1; i++) {
     fprintf(foutput, "%Lf %.10Lf\n", E_obs[i], N_obs[i] / N_tot);
   }

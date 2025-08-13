@@ -1,5 +1,4 @@
-#define DEBUG_DIV 10.0
-#define MAX_ITER 3000
+
 
 
 long double interpolate(long double a, long double b, long double f) {
@@ -32,19 +31,19 @@ Real checkIntersect(long double x1, long double y1, long double x2,
 //finds any intersection. it is not guranteed that it is the closest one, i.e. the first hit. Sufficiently small stepsize should circumvent the problem,
 //as well as retaking the step with a smaller stepsize.
 int get_interpolated_sp(const long double x1, const long double y1,
-    const long double x2, const long double y2, const SurfacePoint *diskdata,
+    const long double x2, const long double y2, SurfacePoint *diskdata,
     const size_t ddsize, SurfacePoint &out, bool mirrory) {
   for (size_t i = 0; i < ddsize - 1; i++) {
     SurfacePoint p0 = diskdata[i];
     SurfacePoint p1 = diskdata[i + 1];
     long double mul = mirrory ? -1 : 1;
-    long double pt = checkIntersect(p0.x, mul * p0.y / DEBUG_DIV, p1.x,
-        mul * p1.y / DEBUG_DIV, x1, y1, x2, y2);
+    long double pt = checkIntersect(p0.x, mul * p0.y, p1.x,
+        mul * p1.y, x1, y1, x2, y2);
     if (pt != NO_INTERSECT) {
       long double xi = p0.x + pt * (p1.x - p0.x);
       long double yi = mul * (p0.y + pt * (p1.y - p0.y));
       out.x = xi;
-      out.y = yi / DEBUG_DIV;
+      out.y = yi;
       out.density = interpolate(p0.density, p1.density, pt);
 //      if(out.density == 0.0){
 //        return NO_INTERSECT;
@@ -60,9 +59,34 @@ int get_interpolated_sp(const long double x1, const long double y1,
   return NO_INTERSECT;
 }
 
+int get_interpolated_sp(const long double x1, const long double y1,
+    const long double x2, const long double y2, QuadTree* quadtree, SurfacePoint &out, int& index) {
+  SurfaceElement* elem;
+  Real result = quadtree->check_intersect(x1,y1,x2,y2,elem);
+  if(result != NO_INTERSECT) {
+    index = elem->index;
+    long double xi = (elem->sp0->x) + result * ((elem->sp1->x) - (elem->sp0->x));
+    long double yi = (elem->sp0->y) + result * ((elem->sp1->y) - (elem->sp0->y));
+    out.x = xi;
+    out.y = yi;
+    out.density = interpolate(elem->sp0->density, elem->sp1->density, result);
+    //      if(out.density == 0.0){
+    //        return NO_INTERSECT;
+    //      }
+    //should be zero if either p is zero because linear interpolation of these velocities at that place is probably not physically
+    out.u0 = interpolate(elem->sp0->u0, elem->sp1->u0, result);
+    out.u1 = interpolate(elem->sp0->u1, elem->sp1->u1, result);
+    out.u2 = interpolate(elem->sp0->u2, elem->sp1->u2, result);
+    out.u3 = interpolate(elem->sp0->u3, elem->sp1->u3, result);
+    return INTERSECT;
+  }
+  index = 0;
+  return NO_INTERSECT;
+}
+
 void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
-    int &stop_integration, const SurfacePoint *diskdata, const size_t ddsize) {
+    int &stop_integration, SurfacePoint *diskdata, const size_t ddsize, QuadTree* tree) {
   long double dobs;
   long double xobs2, yobs2;
   long double atol, rtol;
@@ -323,9 +347,10 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     }
 
     if (iter > MAX_ITER - 10) {
-      std::cout << h << " " << iter << std::endl;
-      std::cout << r << " " << th << " " << phi << std::endl;
-      std::cout << rau << " " << thau << " " << phiau << std::endl;
+//      std::cout << "Reaching max iter with..." << std::endl;
+//      std::cout << h << " " << iter << std::endl;
+//      std::cout << r << " " << th << " " << phi << std::endl;
+//      std::cout << rau << " " << thau << " " << phiau << std::endl;
     }
 
     if (iter > MAX_ITER) {
@@ -378,6 +403,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
       index = 0;
       res = NO_INTERSECT;
     }
+//    res = get_interpolated_sp(xcoordprev,ycoordprev,xcoord,ycoord,tree,spi,index);
     //deal with (possible) intersection
 #ifndef xxx
     if (res == INTERSECT) {
@@ -423,6 +449,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     }
 #endif
   } while (stop_integration == 0);
+
   if (stop_integration == 1 || stop_integration == 128) {
     xem[1] = r;
     //we also need the density at the point of the hit... for what????
