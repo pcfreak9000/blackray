@@ -6,7 +6,7 @@ long double interpolate(long double a, long double b, long double f) {
   return (1.0 - f) * a + f * b;
 }
 
-long double checkIntersect(long double x1, long double y1, long double x2,
+Real checkIntersect(long double x1, long double y1, long double x2,
     long double y2, long double x3, long double y3, long double x4,
     long double y4) {
   long double axl = std::min(x1, x2);

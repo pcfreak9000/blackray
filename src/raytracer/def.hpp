@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <vector>
 using namespace std;
 
 #define imax 400
@@ -27,8 +28,8 @@ struct SurfacePoint {
 };
 
 struct SurfaceElement {
-  SurfacePoint sp0;
-  SurfacePoint sp1;
+  SurfacePoint *sp0;
+  SurfacePoint *sp1;
 };
 
 struct RayHit {
@@ -50,23 +51,24 @@ using Real = long double;
 class QuadTree {
 public:
   QuadTree(Real x, Real y, Real width, Real height);
-  int check_intersect(Real x1, Real y1, Real x2, Real y2,
-      SurfaceElement *intersect);
+  Real check_intersect(Real x1, Real y1, Real x2, Real y2,
+      SurfaceElement *&intersect);
   void put_element(SurfaceElement *element);
 private:
-  QuadTree *subtrees[4];
+  vector<QuadTree*> subtrees;
+  vector<SurfaceElement*> myelements;
   Real x, y, width, height;
-  SurfaceElement **myelements;
-  size_t myelemsize;
   size_t max_elements;
   bool is_leaf;
 //  bool is_root;
 
   void subdivide();
-
+  bool fits(SurfaceElement *element);
 };
 /*-----------------------------------------------------------*/
-
+Real checkIntersect(long double x1, long double y1, long double x2,
+    long double y2, long double x3, long double y3, long double x4,
+    long double y4);
 void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
     int &stop_integration, const SurfacePoint *diskdata, const size_t ddsize);
