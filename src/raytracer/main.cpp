@@ -11,37 +11,51 @@ QuadTree::QuadTree(Real x, Real y, Real width, Real height) :
     x(x), y(y), width(width), height(height), max_elements(4), is_leaf(true),level(0) {
 }
 
-Real QuadTree::check_intersect(Real x1, Real y1, Real x2, Real y2, SurfaceElement*& out){
-  for(int i=0; i<myelements.size(); i++) {
-    SurfaceElement* elem = myelements[i];
-    Real res = checkIntersect(x1,y1,x2,y2,elem->sp0->x,elem->sp0->y,elem->sp1->x,elem->sp1->y);
-    if(res != NO_INTERSECT) {
-      out = elem;
-      return res;
-    }
-  }
+Real QuadTree::check_intersect(Real x1, Real y1, Real x2, Real y2, SurfaceElement** out){
+
   if(!is_leaf) {
     for(int i=0; i<4; i++){
-      if(subtrees[i]->fully_inside(x1,y1,x2,y2)){
+      if(subtrees[i]->overlaps(x1,y1,x2,y2)){
         Real ressub = subtrees[i]->check_intersect(x1,y1,x2,y2,out);
         if(ressub != NO_INTERSECT){
           return ressub;
         }
-        break;
+        //this needs some benchmarking to check if this actually improves things:
+        if(subtrees[i]->fully_inside(x1,y1,x2,y2)){
+          break;
+        }
       }
     }
   }
+  for(int i=0; i<myelements.size(); i++) {
+        SurfaceElement* elem = myelements[i];
+        Real res = checkIntersect(elem->sp0->x,elem->sp0->y,elem->sp1->x,elem->sp1->y,x1,y1,x2,y2);
+        if(res != NO_INTERSECT) {
+          *out = elem;
+          return res;
+        }
+    }
+
   return NO_INTERSECT;
 }
 
+size_t QuadTree::size(){
+  if(is_leaf) return myelements.size();
+  size_t s = myelements.size();
+  for(int i=0; i<4; i++){
+    s += subtrees[i]->size();
+  }
+  return s;
+}
+
 void QuadTree::validate(){
-  std::cout << "Validating..." << std::endl;
+  //std::cout << "Validating..." << std::endl;
   for(SurfaceElement* se : myelements){
     if(!se) std::cout << level << " " << myelements.size() << "--- uh oh ---: " << se << std::endl;
     if(!se->sp0) std::cout << level << " " << myelements.size() << " oh no 0: " << se->sp0 << std::endl;
     if(!se->sp1) std::cout << level << " " << myelements.size() << " oh no 1: " << se->sp1 << std::endl;
   }
-#ifdef abc
+#ifndef abc
   if(!is_leaf){
     for(QuadTree* qt : subtrees){
       qt->validate();
@@ -58,19 +72,30 @@ bool QuadTree::fits(SurfaceElement *element) {
 
   return maxx < x+width && minx >= x && maxy < y+height && miny >= y;
 }
+
+bool QuadTree::overlaps(Real x0, Real y0, Real x1, Real y1) {
+  Real maxx = std::max(x0, x1);
+  Real minx = std::min(x0, x1);
+  Real maxy = std::max(y0, y1);
+  Real miny = std::min(y0, y1);
+  return maxx >= x && minx < x+width && maxy >= y && miny < y+height;
+}
+
 bool QuadTree::fully_inside(Real x0, Real y0, Real x1, Real y1) {
-  Real maxx = std::max(y0, x1);
-  Real minx = std::min(y0, x1);
+  Real maxx = std::max(x0, x1);
+  Real minx = std::min(x0, x1);
   Real maxy = std::max(y0, y1);
   Real miny = std::min(y0, y1);
 
   return maxx < x+width && minx >= x && maxy < y+height && miny >= y;
 }
 void QuadTree::subdivide() {
-  QuadTree* q1 = new QuadTree(x+width/2.0,y+height/2.0,width/2.0,height/2.0);
-  QuadTree* q2 = new QuadTree(x,y+height/2.0,width/2.0,height/2.0);
-  QuadTree* q3 = new QuadTree(x,y,width/2.0,height/2.0);
-  QuadTree* q4 = new QuadTree(x+width/2.0,y,width/2.0, height/2.0);
+  Real w_2 = width/2.0;
+  Real h_2 = height/2.0;
+  QuadTree* q1 = new QuadTree(x+w_2, y+h_2, w_2, h_2);
+  QuadTree* q2 = new QuadTree(x,     y+h_2, w_2, h_2);
+  QuadTree* q3 = new QuadTree(x,     y,     w_2, h_2);
+  QuadTree* q4 = new QuadTree(x+w_2, y,     w_2, h_2);
   q1->level = this->level+1;
   q2->level = this->level+1;
   q3->level = this->level+1;
@@ -80,19 +105,16 @@ void QuadTree::subdivide() {
   subtrees.push_back(q2);
   subtrees.push_back(q3);
   subtrees.push_back(q4);
-  vector<size_t> forremoval;
-  for(size_t k=0; k<myelements.size(); k++) {
-    SurfaceElement *se = myelements[k];
+  for(auto vecit = myelements.begin(); vecit != myelements.end(); vecit++){
+    SurfaceElement* se = *vecit;
     for(int i=0; i<4; i++){
       if(subtrees[i]->fits(se)){
-        forremoval.push_back(k);
         subtrees[i]->put_element(se);
+        myelements.erase(vecit);
+        vecit--;
         break;
       }
     }
-  }
-  for(size_t rem : forremoval) {
-    myelements.erase(myelements.begin()+rem);
   }
 }
 
@@ -157,46 +179,50 @@ int main(int argc, char *argv[]) {
   std::string line;
   std::getline(disk, line); // Read and ignore the header line
 
-  std::vector<SurfacePoint> diskdata;//, dd2;
+  std::vector<SurfacePoint*> diskdata, dd2;
   Real minx=1e9,maxx=0,miny=1e9,maxy=0;
   while (std::getline(disk, line)) {
     std::istringstream iss(line);
-    SurfacePoint dp;//,dpunder;
-
+    SurfacePoint* dpp = new SurfacePoint;
+    SurfacePoint* dpunderp = new SurfacePoint;
+    SurfacePoint& dp = *dpp;
+    SurfacePoint& dpunder = *dpunderp;
     if (!(iss >> dp.x >> dp.y >> dp.density >> dp.u0 >> dp.u1 >> dp.u2 >> dp.u3)) {
       std::cerr << "Error: Malformed line - " << line << std::endl;
       continue;
     }
     dp.y = dp.y < 0.0 ? 0.0 : dp.y;
     dp.y /= DEBUG_DIV;
-//    dpunder = dp;
-//    dpunder.y *= -1;
-//    if(dp.x < minx) minx = dp.x;
-//    if(dp.y < miny) miny = dp.y;
-//    if(dp.x > maxx) maxx = dp.x;
-//    if(dp.y > maxy) maxy = dp.y;
-//    if(dpunder.y < miny) miny = dpunder.y;
-//    if(dpunder.y > maxy) maxy = dpunder.y;
-    diskdata.push_back(dp);
-    //dd2.push_back(&dpunder);
+    dpunder = dp;
+    dpunder.y *= -1;
+    if(dp.x < minx) minx = dp.x;
+    if(dp.y < miny) miny = dp.y;
+    if(dp.x > maxx) maxx = dp.x;
+    if(dp.y > maxy) maxy = dp.y;
+    if(dpunder.y < miny) miny = dpunder.y;
+    if(dpunder.y > maxy) maxy = dpunder.y;
+    diskdata.push_back(dpp);
+    dd2.push_back(dpunderp);
   }
 
   disk.close();
-//  QuadTree tree(minx-1,miny-1, maxx-minx+2, maxy-miny+2);
-//  for(int i=0; i<diskdata.size()-1; i++){
-//    SurfaceElement* elem = new SurfaceElement;
-//    elem->sp0 = diskdata[i];
-//    elem->sp1 = diskdata[i+1];
-//    tree.put_element(elem);
-//  }
-//  for(int i=0; i<dd2.size()-1; i++){
-//    SurfaceElement* elem = new SurfaceElement;
-//    elem->sp0 = dd2[i];
-//    elem->sp1 = dd2[i+1];
-//    tree.put_element(elem);
-//  }
-//  tree.validate();
-
+  QuadTree* treep = new QuadTree(minx-1,miny-1, maxx-minx+2, maxy-miny+2);
+  QuadTree& tree = *treep;
+  for(int i=0; i<diskdata.size()-1; i++){
+    SurfaceElement* elem = new SurfaceElement;
+    elem->sp0 = diskdata[i];
+    elem->sp1 = diskdata[i+1];
+    elem->index = 1;
+    tree.put_element(elem);
+  }
+  for(int i=0; i<dd2.size()-1; i++){
+    SurfaceElement* elem = new SurfaceElement;
+    elem->sp0 = dd2[i];
+    elem->sp1 = dd2[i+1];
+    elem->index = 128;
+    tree.put_element(elem);
+  }
+  tree.validate();
   /* ----- Set free parameters ----- */
 
   // Input parameters: spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep
@@ -277,7 +303,7 @@ int main(int argc, char *argv[]) {
       /*entering in raytrace_new.cpp*/
       // printf("entering in the raytrace part of the code\n");
       raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition,
-          diskdata.data(), diskdata.size(), nullptr);
+          diskdata.data(), diskdata.size(), treep);
 
       if (stop_integration_condition == 1
           || stop_integration_condition == 128) {
@@ -333,6 +359,7 @@ int main(int argc, char *argv[]) {
 
   fclose(foutput);
   fclose(foutput_coord);
+  tree.validate();
   std::cout << "Done" << std::endl;
   return 0;
 }

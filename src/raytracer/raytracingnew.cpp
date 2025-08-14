@@ -31,11 +31,11 @@ Real checkIntersect(long double x1, long double y1, long double x2,
 //finds any intersection. it is not guranteed that it is the closest one, i.e. the first hit. Sufficiently small stepsize should circumvent the problem,
 //as well as retaking the step with a smaller stepsize.
 int get_interpolated_sp(const long double x1, const long double y1,
-    const long double x2, const long double y2, SurfacePoint *diskdata,
+    const long double x2, const long double y2, SurfacePoint **diskdata,
     const size_t ddsize, SurfacePoint &out, bool mirrory) {
   for (size_t i = 0; i < ddsize - 1; i++) {
-    SurfacePoint p0 = diskdata[i];
-    SurfacePoint p1 = diskdata[i + 1];
+    SurfacePoint& p0 = *diskdata[i];
+    SurfacePoint& p1 = *diskdata[i + 1];
     long double mul = mirrory ? -1 : 1;
     long double pt = checkIntersect(p0.x, mul * p0.y, p1.x,
         mul * p1.y, x1, y1, x2, y2);
@@ -62,7 +62,7 @@ int get_interpolated_sp(const long double x1, const long double y1,
 int get_interpolated_sp(const long double x1, const long double y1,
     const long double x2, const long double y2, QuadTree* quadtree, SurfacePoint &out, int& index) {
   SurfaceElement* elem;
-  Real result = quadtree->check_intersect(x1,y1,x2,y2,elem);
+  Real result = quadtree->check_intersect(x1,y1,x2,y2,&elem);
   if(result != NO_INTERSECT) {
     index = elem->index;
     long double xi = (elem->sp0->x) + result * ((elem->sp1->x) - (elem->sp0->x));
@@ -86,7 +86,7 @@ int get_interpolated_sp(const long double x1, const long double y1,
 
 void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
-    int &stop_integration, SurfacePoint *diskdata, const size_t ddsize, QuadTree* tree) {
+    int &stop_integration, SurfacePoint **diskdata, const size_t ddsize, QuadTree* tree) {
   long double dobs;
   long double xobs2, yobs2;
   long double atol, rtol;
@@ -347,10 +347,10 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     }
 
     if (iter > MAX_ITER - 10) {
-//      std::cout << "Reaching max iter with..." << std::endl;
-//      std::cout << h << " " << iter << std::endl;
-//      std::cout << r << " " << th << " " << phi << std::endl;
-//      std::cout << rau << " " << thau << " " << phiau << std::endl;
+      std::cout << "Reaching max iter with..." << std::endl;
+      std::cout << h << " " << iter << std::endl;
+      std::cout << r << " " << th << " " << phi << std::endl;
+      std::cout << rau << " " << thau << " " << phiau << std::endl;
     }
 
     if (iter > MAX_ITER) {
@@ -369,41 +369,41 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     long double ycoord = r * cos(th);
     long double xcoordprev = std::sqrt(rau * rau + spin2) * sin(thau);
     long double ycoordprev = rau * cos(thau);
-    SurfacePoint spia, spib;
-    int resa = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
-        diskdata, ddsize, spia, false);
-    int resb = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
-        diskdata, ddsize, spib, true);
+//    SurfacePoint spia, spib;
+//    int resa = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
+//        diskdata, ddsize, spia, false);
+//    int resb = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
+//        diskdata, ddsize, spib, true);
     int res = NO_INTERSECT;
     int index = 0;
     //resb = NO_INTERSECT;
-    if (resa == INTERSECT && resb == INTERSECT) {
-      long double dista = std::sqrt(
-      SQR(spia.x-xcoordprev) + SQR(spia.y - ycoordprev));
-      long double distb = std::sqrt(
-      SQR(spib.x-xcoordprev) + SQR(spib.y - ycoordprev));
-      if (dista < distb) {
-        res = resa;
-        spi = spia;
-        index = 1;
-      } else {
-        res = resb;
-        spi = spib;
-        index = 128;
-      }
-    } else if (resa == INTERSECT) {
-      res = resa;
-      spi = spia;
-      index = 1;
-    } else if (resb == INTERSECT) {
-      res = resb;
-      spi = spib;
-      index = 128;
-    } else {
-      index = 0;
-      res = NO_INTERSECT;
-    }
-//    res = get_interpolated_sp(xcoordprev,ycoordprev,xcoord,ycoord,tree,spi,index);
+//    if (resa == INTERSECT && resb == INTERSECT) {
+//      long double dista = std::sqrt(
+//      SQR(spia.x-xcoordprev) + SQR(spia.y - ycoordprev));
+//      long double distb = std::sqrt(
+//      SQR(spib.x-xcoordprev) + SQR(spib.y - ycoordprev));
+//      if (dista < distb) {
+//        res = resa;
+//        spi = spia;
+//        index = 1;
+//      } else {
+//        res = resb;
+//        spi = spib;
+//        index = 128;
+//      }
+//    } else if (resa == INTERSECT) {
+//      res = resa;
+//      spi = spia;
+//      index = 1;
+//    } else if (resb == INTERSECT) {
+//      res = resb;
+//      spi = spib;
+//      index = 128;
+//    } else {
+//      index = 0;
+//      res = NO_INTERSECT;
+//    }
+    res = get_interpolated_sp(xcoordprev,ycoordprev,xcoord,ycoord,tree,spi,index);
     //deal with (possible) intersection
 #ifndef xxx
     if (res == INTERSECT) {

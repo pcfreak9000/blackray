@@ -55,9 +55,10 @@ class QuadTree {
 public:
   QuadTree(Real x, Real y, Real width, Real height);
   Real check_intersect(Real x1, Real y1, Real x2, Real y2,
-      SurfaceElement *&intersect);
+      SurfaceElement ** intersect);
   void put_element(SurfaceElement *element);
   void validate();
+  size_t size();
 private:
   std::vector<QuadTree*> subtrees;
   std::vector<SurfaceElement*> myelements;
@@ -69,6 +70,7 @@ private:
 
   void subdivide();
   bool fits(SurfaceElement *element);
+  bool overlaps(Real x0, Real y0, Real x1, Real y1);
   bool fully_inside(Real x0, Real y0, Real x1, Real y1);
 };
 /*-----------------------------------------------------------*/
@@ -77,7 +79,7 @@ Real checkIntersect(long double x1, long double y1, long double x2,
     long double y4);
 void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
-    int &stop_integration, SurfacePoint *diskdata, const size_t ddsize, QuadTree* tree);
+    int &stop_integration, SurfacePoint **diskdata, const size_t ddsize, QuadTree* tree);
 void diffeqs(long double b, long double vars[], long double diffs[]);
 void redshift(long double r, long double ktkp, long double &gg);
 // void redshift_polish_doughnut(long double r, long double th, long double l

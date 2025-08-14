@@ -24,7 +24,7 @@ a52 = 0
 alpha = -3
 
 Nr = 100 #1000
-Nph = 40 #400
+Nph = 25 #400
 Rmax = 80
 rstep  = np.e**((np.log(Rmax)-np.log(np.cos(np.pi*incl/180)))/Nr);
 pstep  = 2*np.pi/Nph;
