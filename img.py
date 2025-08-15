@@ -7,7 +7,7 @@ from scipy.interpolate import griddata
 def normalize_column(col):
     return (col - np.min(col)) / (np.max(col) - np.min(col))
 
-def main(input_file, output_image, size=256, use_labels=False):
+def main(input_file, output_image, size=2048, use_labels=False):
     # Load the data
     data = np.loadtxt(input_file, delimiter=None)
 
@@ -56,6 +56,6 @@ def main(input_file, output_image, size=256, use_labels=False):
 
 if __name__ == "__main__":
     # Set `use_labels` to True to enable color labeling
-    main("output.txt", "outputg.png", size=1024, use_labels=False)
-    main("output.txt", "outputi.png", size=1024, use_labels=True)
+    main("output.txt", "outputg.png", size=8192, use_labels=False)
+    main("output.txt", "outputi.png", size=8192, use_labels=True)
 
