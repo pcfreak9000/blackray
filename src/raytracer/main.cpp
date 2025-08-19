@@ -139,6 +139,7 @@ void QuadTree::put_element(SurfaceElement *element){
 
 int main(int argc, char *argv[]) {
   std::cout << "Setting up raytracer..." << std::endl;
+  if(DEBUG_DIV != 1.0) std::cout << "debug_div is non-one" << std::endl;
   long double spin2;
   long double E_line, N_0, N_tot, N_tot1, N_tot2, alpha;
   long double iobs, dobs;
@@ -180,7 +181,7 @@ int main(int argc, char *argv[]) {
   std::getline(disk, line); // Read and ignore the header line
 
   std::vector<SurfacePoint*> diskdata, dd2;
-  Real minx=1e9,maxx=0,miny=1e9,maxy=0;
+  Real minx=INFINITY,maxx=-INFINITY,miny=INFINITY,maxy=-INFINITY;
   while (std::getline(disk, line)) {
     std::istringstream iss(line);
     SurfacePoint* dpp = new SurfacePoint;
@@ -191,7 +192,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "Error: Malformed line - " << line << std::endl;
       continue;
     }
-    dp.y = dp.y < 0.0 ? 0.0 : dp.y;
+    if (dp.y < 0.0) {
+      std::cerr << "Error: Negative disk heights not supported, results might be significantly wrong!" << std::endl;
+      //dp.y *= -1;
+      continue;
+    }
     dp.y /= DEBUG_DIV;
     dpunder = dp;
     dpunder.y *= -1;

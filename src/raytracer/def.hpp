@@ -49,7 +49,7 @@ using Real = long double;
 #define INTERSECT 0
 #define SQR(x) ((x)*(x))
 #define DEBUG_DIV 10.0
-#define MAX_ITER 3000
+#define MAX_ITER 4000
 
 class QuadTree {
 public:
