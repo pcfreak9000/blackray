@@ -305,7 +305,6 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         h *= 2.0;
 
     } while (check == 1);
-    //std::cout << h << std::endl;
 
     /* ----- solutions to the fourth-order RKN method ----- */
 //apply the new step to the variables
@@ -357,11 +356,6 @@ void raytrace(long double xobs, long double yobs, long double iobs,
       stop_integration = 255;
       break;
     }
-//    if(r>10000.0){
-//      check2 = 0;
-//      count = 0;
-//      continue;
-//    }
 
 //check if the new position intersects the accretion disk
     //convert coordinates of current and previous position via BL-cartesian conversion
@@ -369,40 +363,9 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     long double ycoord = r * cos(th);
     long double xcoordprev = std::sqrt(rau * rau + spin2) * sin(thau);
     long double ycoordprev = rau * cos(thau);
-//    SurfacePoint spia, spib;
-//    int resa = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
-//        diskdata, ddsize, spia, false);
-//    int resb = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
-//        diskdata, ddsize, spib, true);
     int res = NO_INTERSECT;
     int index = 0;
-    //resb = NO_INTERSECT;
-//    if (resa == INTERSECT && resb == INTERSECT) {
-//      long double dista = std::sqrt(
-//      SQR(spia.x-xcoordprev) + SQR(spia.y - ycoordprev));
-//      long double distb = std::sqrt(
-//      SQR(spib.x-xcoordprev) + SQR(spib.y - ycoordprev));
-//      if (dista < distb) {
-//        res = resa;
-//        spi = spia;
-//        index = 1;
-//      } else {
-//        res = resb;
-//        spi = spib;
-//        index = 128;
-//      }
-//    } else if (resa == INTERSECT) {
-//      res = resa;
-//      spi = spia;
-//      index = 1;
-//    } else if (resb == INTERSECT) {
-//      res = resb;
-//      spi = spib;
-//      index = 128;
-//    } else {
-//      index = 0;
-//      res = NO_INTERSECT;
-//    }
+
     res = get_interpolated_sp(xcoordprev,ycoordprev,xcoord,ycoord,tree,spi,index);
     //deal with (possible) intersection
 #ifndef xxx
@@ -418,7 +381,6 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         count++;
       }
       if (count > 0) {
-        //if(xcoord>=6.0&&xcoord<=50.0){
         if (std::abs(spi.y) > 0.0 && spi.x > 0.0) {
           // next step is redshift calculation with data from the intersection
           // point. we also need the interpolated 4-vel etc
@@ -428,7 +390,6 @@ void raytrace(long double xobs, long double yobs, long double iobs,
           check2 = 0;
           count = 0;
           h = prevh;
-          //std::cout << "reset" << std::endl;
           // this is a simplification, we can only be sure about the final
           // whereabouts of the photon if it ends up beyond the event horizon ore
           // is ejected to infinity
@@ -464,11 +425,11 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     //Real x = std::sqrt(r);
     //Real p_ut = (0.0 + CUBE(x))/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
     //Real p_uph = 1/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
-    long double karray[4] = {kt0, kr0, kth0, kphi0};//TODO kr0 or kr? kth0 or kth?
-    long double uarray[4] = {spi.u0, spi.u1,spi.u2, spi.u3};
+    long double karray[4] = {kt0, kr0, kth0, kphi0};
+    long double uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
     //long double uarray[4] = {p_ut,0.0,0.0,p_uph};
     long double obsuarray[4] = {1.0, 0.0, 0.0, 0.0};
-    long double obskarray[4] = {kt0, kr0, kth0, kphi0};//TODO kr0 or kr? kth0 or kth?
+    long double obskarray[4] = {kt0, kr0, kth0, kphi0};
     long double sum = 0.0;
     long double obssum = 0.0;
     for(int i=0; i<4; i++){
