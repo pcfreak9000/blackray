@@ -3,6 +3,7 @@
 import os
 import sys
 import numpy as np
+import math
 
 # ----------------------------------------------------------------------------------------------------
 # INPUT PARAMETERS
@@ -12,7 +13,7 @@ path_to_disk_data_file = "disk.csv"
 path_to_xillver_file = "/home/roman/xillver-a-Ec5.fits"
 gamma = 1.8
 afe = 1
-logxi = 1.
+logxi = 3.1
 ecut = 300
 incl = 70.0
 
@@ -23,11 +24,13 @@ epsi3 = 0
 a52 = 0
 alpha = -3
 
-Nr = 100 #1000
-Nph = 40 #400
-Rmax = 80
-rstep  = np.e**((np.log(Rmax)-np.log(np.cos(np.pi*incl/180)))/Nr);
-pstep  = 2*np.pi/Nph;
+Nr = 1000 #1000
+Nph = 400 #400
+Rmax = 60
+rstep  = 1.0001 #np.e**((np.log(Rmax)-np.log(np.cos(np.pi*incl/180)))/Nr);
+pstep  = 2*math.pi/3600 #2*np.pi/Nph;
+print(rstep)
+print(pstep)
 
 # ----------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------
