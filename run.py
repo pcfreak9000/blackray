@@ -24,11 +24,11 @@ epsi3 = 0
 a52 = 0
 alpha = -3
 
-Nr = 1000 #1000
-Nph = 400 #400
+Nr = 4500 #1000
+Nph = 1800 #400
 Rmax = 60
-rstep  = 1.0001 #np.e**((np.log(Rmax)-np.log(np.cos(np.pi*incl/180)))/Nr);
-pstep  = 2*math.pi/3600 #2*np.pi/Nph;
+rstep  = np.e**((np.log(Rmax)-np.log(np.cos(np.pi*incl/180)))/Nr);
+pstep  = 2*np.pi/Nph;
 print(rstep)
 print(pstep)
 
