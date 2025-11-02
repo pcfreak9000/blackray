@@ -15,6 +15,8 @@ using namespace std;
 #define EMIN_RELXILL 0.00035  // minimal energy of the convolution (in keV)
 #define EMAX_RELXILL 2000.0
 
+#define COSNE
+
 void rebin_spectrum(double *ener, double *flu, int nbins, double *ener0,
                     double *flu0, int nbins0);
 void get_log_grid(double *ener, int n_ener, double emin, double emax);
@@ -135,8 +137,11 @@ int main(int argc, char *argv[]) {
 
     r = r_disk;
     g = gfactor;
-    // ctheta = cosne;
+#ifdef COSNE
+    ctheta = cosne;
+#else
     ctheta = cos(iobs);
+#endif
     rsquare = xobs * xobs + yobs * yobs;
     get_local_spec(xill_spec, xill_spec_interpolated, ctheta, xill_n_ener);
     rebin_spectrum(E_obs, local_spec, number_of_bins, xill_energy,
