@@ -3,6 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
+from sys import argv
 
 def normalize_column(col):
     return (col - np.min(col)) / (np.max(col) - np.min(col))
@@ -55,7 +56,10 @@ def main(input_file, output_image, size=1024, use_labels=False):
         plt.imsave(output_image, grid_d, cmap='gray', vmin=0, vmax=1)
 
 if __name__ == "__main__":
+    outtxt = argv[1]
+    outg = argv[2]
+    outi = argv[3]
     # Set `use_labels` to True to enable color labeling
-    main("output.txt", "outputg.png", size=2048, use_labels=False)
-    main("output.txt", "outputi.png", size=2048, use_labels=True)
+    main(outtxt, outg, size=2048, use_labels=False)
+    main(outtxt, outi, size=2048, use_labels=True)
 

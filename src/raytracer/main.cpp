@@ -1,5 +1,6 @@
 #include "def.hpp"
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -171,6 +172,7 @@ int main(int argc, char *argv[]) {
   FILE *foutput_coord;
 
   const char *diskdatafile = argv[10];
+
   std::ifstream disk(diskdatafile);
   if (!disk) {
     std::cerr << "Error: Could not open file!" << std::endl;
@@ -260,12 +262,12 @@ int main(int argc, char *argv[]) {
 
   /*** thin disk parameters  ***/
   xin = isco; /* inner radius of the accretion disk; set isco */
-  xout = 50; /* outer radius of the accretion disk */
+  xout = 60; /* outer radius of the accretion disk */
 
   /* ----- Set computational parameters ----- */
 
   robs_i = 1;
-  robs_f = 80;
+  robs_f = 65;
 
   // rstep  = 1.008;
   rstep2 = (rstep - 1) / rstep;
@@ -277,23 +279,28 @@ int main(int argc, char *argv[]) {
     E_obs[i] = E_obs[i - 1] + 0.025;
     N_obs[i] = 0;
   }
-
+  const char *tempdir = argv[11];
+  const char *outtxt = argv[12];
+  string tempdirs(tempdir);
   /*Iron line output file*/
   // sprintf(filename_o,"iron_a%.03f.epsilon_r%.02f.epsilon_t%.02f.i%.02f.dat",spin,epsi3,iobs_deg);
   // sprintf(filename_o,"ironline_data/iron_a%.05Le.i%.02Le.e_%.02Le.a13_%.02Le.a22_%.02Le.a52_%.02Le.dat",spin,iobs_deg,epsi3,a13,a22,a52);
-  snprintf(filename_o, sizeof(filename_o), "ironline_data/"
-      "iron_a_%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%.05Lf.dat",
+  string s1("ironline_data/"
+      "iron_a_%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%.05Lf.dat");
+  snprintf(filename_o, sizeof(filename_o), (tempdirs+s1).c_str(),
       spin, iobs_deg, epsi3, a13, a22, a52);
 
   /*photon data output file*/
   // sprintf(filename_o2,"coord_a%.03f.epsilon_r%.02f.epsilon_t%.02f.i%.02f.dat",spin,epsi3,iobs_deg);
-  snprintf(filename_o2, sizeof(filename_o2), "data/"
+  string s2("data/"
       "photons_data_a%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%."
-      "05Lf.dat", spin, iobs_deg, epsi3, a13, a22, a52);
-
+      "05Lf.dat");
+  snprintf(filename_o2, sizeof(filename_o2), (tempdirs+s2).c_str(), spin, iobs_deg, epsi3, a13, a22, a52);
+  //cout << tempdirs+s2 << endl;
   foutput_coord = fopen(filename_o2, "w");
   if(foutput_coord==nullptr) std::cerr << "Problems with data file!" << std::endl;
-  std::ofstream tmpOutFile("output.txt");
+  //string s3("output.txt");
+  std::ofstream tmpOutFile(outtxt);
   std::cout << "Starting raytracing loop" << std::endl;
   /* ----- assign photon position in the grid ----- */
   for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
