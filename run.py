@@ -1,4 +1,4 @@
-#!/bin/python
+#! /usr/bin/env python
 
 import os
 import sys
@@ -30,8 +30,8 @@ def main(**kwargs):
     a52 = 0
     alpha = kwargs['alpha']
 
-    Nr = 600 #4500 #1000
-    Nph = 240 #1800 #400
+    Nr = 4500 #1000
+    Nph = 1800 #400
     Rmax = 60
     rstep  = np.e**((np.log(Rmax)-np.log(np.cos(np.pi*incl/180)))/Nr);
     pstep  = 2*np.pi/Nph;
@@ -49,7 +49,7 @@ def main(**kwargs):
     if dddd != 0:
         print(dddd)
     print("End of ray-tracing part")
-    
+
     xillver_command = "python get_xillver_spectrum.py %f %f %f %f %f %s %s"%(gamma, afe, logxi, ecut, incl, path_to_xillver_file,tempdir)
     os.system(xillver_command)
 
