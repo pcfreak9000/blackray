@@ -163,9 +163,9 @@ int main(int argc, char *argv[]) {
   int i, j, m;
   int photon_index = 0;
 
-  char filename_i[128];
-  char filename_o[128];
-  char filename_o2[128];
+  char filename_i[256];
+  char filename_o[256];
+  char filename_o2[256];
 
   FILE *finput;
   FILE *foutput;
@@ -293,10 +293,10 @@ int main(int argc, char *argv[]) {
   /*photon data output file*/
   // sprintf(filename_o2,"coord_a%.03f.epsilon_r%.02f.epsilon_t%.02f.i%.02f.dat",spin,epsi3,iobs_deg);
   string s2("data/"
-      "photons_data_a%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%."
-      "05Lf.dat");
+      "photons_data_a%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%.05Lf.dat");
   snprintf(filename_o2, sizeof(filename_o2), (tempdirs+s2).c_str(), spin, iobs_deg, epsi3, a13, a22, a52);
-  //cout << tempdirs+s2 << endl;
+//  cout << tempdirs+s2 << endl;
+//  cout << filename_o2 << endl;
   foutput_coord = fopen(filename_o2, "w");
   if(foutput_coord==nullptr) std::cerr << "Problems with data file!" << std::endl;
   //string s3("output.txt");

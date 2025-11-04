@@ -49,6 +49,8 @@ int main(int argc, char *argv[]) {
   // final_filename, incl, logxi, alpha
 
   strcpy(ph_file, argv[1]);
+//  std::cout << argv[1] << std::endl;
+//  std::cout << ph_file << std::endl;
   strcpy(xillver_file, argv[2]);
   strcpy(out_file, argv[3]);
   iobs_deg = atof(argv[4]);

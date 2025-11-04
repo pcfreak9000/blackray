@@ -6,6 +6,9 @@ XILLVER="$2"
 incls=( "5" "30" )
 alphas=( "-3" "-6" )
 accrates=( "0.01" "0.1" "0.2" "0.3" )
+#incls=( "5" )
+#alphas=( "-3" )
+#accrates=( "0.01" )
 if [ "$BINAC2" ]; then
     workdirbase="$WORK"/"$myname"
 else
