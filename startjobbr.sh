@@ -5,3 +5,4 @@ if [ "$BINAC2" ]; then
     conda activate master_project_env
 fi
 ./run.py "$DISKLOC" $SPIN $INCLINATION $ALPHA "$XILLVER" "$WORKDIR"
+#cp "$WORKDIR"/output/*spectrum.dat "$WORKDIR"/output/spectrum.dat

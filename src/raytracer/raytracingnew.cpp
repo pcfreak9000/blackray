@@ -448,8 +448,15 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     gfactor = 1.0;
     cosem = 0.0;
   }
+  if(cosem > 1.05) {
+    std::cout << "Cosem > 1.05 detected, ignoring ray: " << cosem << std::endl;
+    stop_integration = 6;
+    xem[1] = r;
+    gfactor = 1.0;
+    cosem = 0.0;
+  }
   if(cosem > 1.0) {
-    std::cout << "Cosem > 1.0 detected, clamping to 1.0: " << cosem << std::endl;
+    std::cout << "1.05 >= Cosem > 1.0 detected, clamping to 1.0: " << cosem << std::endl;
     cosem = 1.0;
   }
   hit.cosem = cosem;

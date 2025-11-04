@@ -302,6 +302,7 @@ int main(int argc, char *argv[]) {
   //string s3("output.txt");
   std::ofstream tmpOutFile(outtxt);
   std::cout << "Starting raytracing loop" << std::endl;
+  unsigned long long raycount = 0;
   /* ----- assign photon position in the grid ----- */
   for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
     std::cout << "Raytracing: " << (robs - robs_i) / (robs_f - robs_i)
@@ -316,7 +317,7 @@ int main(int argc, char *argv[]) {
       // printf("entering in the raytrace part of the code\n");
       raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition,
           diskdata.data(), diskdata.size(), treep);
-
+      raycount++;
       if (stop_integration_condition == 1
           || stop_integration_condition == 128) {
         fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", photon_index, xobs,
@@ -352,7 +353,7 @@ int main(int argc, char *argv[]) {
     }
   }
 //  tree.validate();
-
+  std::cout << "Integrated " << raycount << " rays" << std::endl;
   std::cout << "Finishing..." << std::endl;
   tmpOutFile.close();
   /* --- print spectrum --- */
