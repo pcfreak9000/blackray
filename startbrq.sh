@@ -1,7 +1,9 @@
 #!/bin/bash
 
 myname="$1"
-XILLVER="$2"
+minrange="$2"
+maxrange="$3"
+XILLVER=$HOME/xillver-a-Ec5.fits
 
 incls=( "5" "30" )
 alphas=( "-3" "-6" )
@@ -17,6 +19,9 @@ fi
 if [ ! -d "$workdirbase" ]; then
     echo "can't execute, workdir not present"
     exit 1
+fi
+if [ "$BINAC2" ]; then
+    ../athena/resolveb.sh "$workdirbase" $minrange $maxrange
 fi
 athfile="$workdirbase/athinput.pp_master_project"
 export SPIN=$(grep -E "^\s*a\s*=" "$athfile" | awk -F'=' '{print $2}' | awk '{print $1}')
