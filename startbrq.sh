@@ -21,6 +21,8 @@ if [ ! -d "$workdirbase" ]; then
     exit 1
 fi
 if [ "$BINAC2" ]; then
+    source "$HOME"/miniconda3/etc/profile.d/conda.sh
+    conda activate master_project_env
     ../athena/resolveb.sh "$workdirbase" $minrange $maxrange
 fi
 athfile="$workdirbase/athinput.pp_master_project"
