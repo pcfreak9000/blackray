@@ -3,6 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
+from matplotlib.colors import TwoSlopeNorm
 from sys import argv
 
 def normalize_column(col):
@@ -50,10 +51,21 @@ def main(input_file, output_image, size=1024, use_labels=False):
         plt.imsave(output_image, rgb_image)
 
     else:
-        # Grayscale mode: 1 - normalized(data)
-        d_inverted = normalize_column(d_raw)
-        grid_d = griddata((x_norm, 1.0-y_norm), d_inverted, (grid_x, grid_y), method='nearest', fill_value=1.0)
-        plt.imsave(output_image, grid_d, cmap='gray', vmin=0, vmax=1)
+        grid_d = griddata((x_norm, y_norm), -np.log10(d_raw), (grid_x, grid_y), method='nearest', fill_value=0.0)
+
+        absmax = np.nanmax(np.abs(grid_d))
+        norm = TwoSlopeNorm(vmin=-absmax, vcenter=0.0, vmax=absmax)
+
+        plt.figure(figsize=(6, 5))
+        img = plt.imshow(grid_d, cmap='seismic', norm=norm, origin='lower', extent=[0, 1, 0, 1])
+        cbar = plt.colorbar(img)
+        cbar.set_label('-log_10(g)')
+        #plt.title("Interpolated Data (log scale)")
+        plt.xlabel("Normalized X")
+        plt.ylabel("Normalized Y")
+        plt.tight_layout()
+        plt.savefig(output_image, dpi=300)
+        plt.close()
 
 if __name__ == "__main__":
     outtxt = argv[1]
