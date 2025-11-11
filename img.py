@@ -33,9 +33,11 @@ def main(input_file, output_image, size=1024, use_labels=False):
         label_colors = {
             255: (1.0, 0.0, 0.0),   # too many iterations, red
             6: (1.0, 0.0, 1.0),   # numerical problems, magenta
-            128: (0.0, 1.0, 0.0),   # backside hit, green
+            130: (0.0, 1.0, 0.0),   # backside hit, green
+            131: (0.0, 0.8, 0.0),  # bakside hit, different
             2: (0.0, 0.0, 1.0),   # miss, blue
-            1: (1.0, 1.0, 0.0),   # hit, yellow
+            128: (1.0, 1.0, 0.0),   # hit, yellow
+            129: (0.8, 0.8, 0.0),  # hit, different element
             4: (0.0, 0.0, 0.0),   # horizon cross, black
             5: (0.0, 0.2, 0.0),   # horizon cross, green-black
             7: (0.3, 0.3, 0.3)    # escape to infinity, gray

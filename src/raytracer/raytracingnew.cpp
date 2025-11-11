@@ -411,7 +411,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 #endif
   } while (stop_integration == 0);
 
-  if (stop_integration == 1 || stop_integration == 128) {
+  if (stop_integration >= 128 && stop_integration <= 131) {
     xem[1] = r;
     //we also need the density at the point of the hit... for what????
 

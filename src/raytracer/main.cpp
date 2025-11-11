@@ -219,14 +219,14 @@ int main(int argc, char *argv[]) {
     SurfaceElement* elem = new SurfaceElement;
     elem->sp0 = diskdata[i];
     elem->sp1 = diskdata[i+1];
-    elem->index = 1;
+    elem->index = 128+i%2;
     tree.put_element(elem);
   }
   for(int i=0; i<dd2.size()-1; i++){
     SurfaceElement* elem = new SurfaceElement;
     elem->sp0 = dd2[i];
     elem->sp1 = dd2[i+1];
-    elem->index = 128;
+    elem->index = 130+i%2;
     tree.put_element(elem);
   }
   tree.validate();
@@ -318,8 +318,8 @@ int main(int argc, char *argv[]) {
       raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition,
           diskdata.data(), diskdata.size(), treep);
       raycount++;
-      if (stop_integration_condition == 1
-          || stop_integration_condition == 128) {
+      if (stop_integration_condition >= 128
+          && stop_integration_condition <= 131) {
         fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", photon_index, xobs,
             yobs, hit.r, hit.gfactor, hit.cosem);
 
