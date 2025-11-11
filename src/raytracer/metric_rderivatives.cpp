@@ -53,9 +53,18 @@ void metric_rderivatives(long double r, long double th, long double dmn[][4]) {
                 0.4e1 / 0.5e1 * t4 *
                     ((-0.7e1 / 0.4e1 + r) * r + 0.3e1 / 0.4e1 * t2) * t2 * t8) +
            t23 * t9 * t11 * (-t11 * t6 + t18);
-
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      dmn[i][j] = 0.0;
+    }
+  }
+#ifdef FLAT_SPACETIME
+  dmn[2][2] = 2*r;
+  dmn[3][3] = 2*r*t8*t8;
+#else
   dmn[0][0] = dgttdr;
   dmn[0][3] = dgtpdr;
   dmn[3][0] = dmn[0][3];
   dmn[3][3] = dgppdr;
+#endif
 }

@@ -103,13 +103,19 @@ void metric(long double r, long double th, long double mn[][4]) {
       mn[i][j] = 0.0;
     }
   }
+#ifdef FLAT_SPACETIME
+  mn[0][0] = -1;
+  mn[1][1] = 1;
+  mn[2][2] = r*r;
+  mn[3][3] = r*r*t8*t8;
+#else
   mn[0][0] = g_tt;
   mn[0][3] = g_tp;
   mn[1][1] = g_rr;
   mn[2][2] = g_thth;
   mn[3][0] = mn[0][3];
   mn[3][3] = g_pp;
-
+#endif
 }
 void metric_inv(long double r, long double th, long double mn[][4]) {
   metric(r, th, mn);

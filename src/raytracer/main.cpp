@@ -219,14 +219,14 @@ int main(int argc, char *argv[]) {
     SurfaceElement* elem = new SurfaceElement;
     elem->sp0 = diskdata[i];
     elem->sp1 = diskdata[i+1];
-    elem->index = 128+i%2;
+    elem->index = 128+(i/RING_DIV)%2;
     tree.put_element(elem);
   }
   for(int i=0; i<dd2.size()-1; i++){
     SurfaceElement* elem = new SurfaceElement;
     elem->sp0 = dd2[i];
     elem->sp1 = dd2[i+1];
-    elem->index = 130+i%2;
+    elem->index = 130+(i/RING_DIV)%2;
     tree.put_element(elem);
   }
   tree.validate();
