@@ -48,9 +48,11 @@ using Real = long double;
 #define NO_INTERSECT -1
 #define INTERSECT 0
 #define SQR(x) ((x)*(x))
+#define CUBE(x) ((x)*(x)*(x))
 #define DEBUG_DIV 1.0
 #define RING_DIV 15
 #define MAX_ITER 5000
+//#define ITER_WARN
 //#define FLAT_SPACETIME does not work because not all occurences of the metric actually use the metric cpp files so this would require some major refactoring
 class QuadTree {
 public:

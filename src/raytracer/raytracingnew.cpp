@@ -84,6 +84,63 @@ int get_interpolated_sp(const long double x1, const long double y1,
   return NO_INTERSECT;
 }
 
+Real calcNorm(Real r, Real th, Real* vec){
+  Real met[4][4];
+  metric(r,th,met);
+  Real norm = 0.0;
+  for(int i=0; i<4; i++) {
+    for(int j=0; j<4; j++) {
+      norm += met[i][j]*vec[i]*vec[j];
+    }
+  }
+  return norm;
+}
+
+void correctMomentumNorm(Real r, Real th, Real& kt, Real& kr, Real& kth, Real& kph) {
+  Real met[4][4];
+  metric(r,th,met);
+  Real kvec[4] = {kt,kr,kth,kph};
+  Real norm = 0.0;
+  for(int i=0; i<4; i++) {
+    for(int j=0; j<4; j++) {
+      norm += met[i][j]*kvec[i]*kvec[j];
+    }
+  }
+  
+  Real deltakth = norm/(met[1][1]*r*r+met[2][2]);
+  Real deltakr = deltakth*r*r;
+  Real factorr = 1.0;
+  Real factorth = 1.0;
+  if(kr*kr-deltakr < 0) factorr = -1.0;
+  if(kth*kth-deltakth <0) factorth = -1.0;
+  kr = sqrt((kr*kr-deltakr)*factorr)*factorr;
+  kth = sqrt((kth*kth-deltakth)*factorth)*factorth;
+  
+}
+
+void correct4VelNorm(Real r, Real th, Real* vel) {
+  Real met[4][4];
+  metric(r,th,met);
+  Real norm = calcNorm(r,th,vel);
+  Real dif = norm+1;
+  Real deltaut = dif/met[0][0];
+  vel[0] = sqrt(vel[0]*vel[0]-deltaut);
+}
+
+
+
+Real calcGfactor(Real met[4][4], Real met0[4][4], Real* karray, Real* uarray, Real* obskarray, Real* obsuarray){
+  long double sum = 0.0;
+  long double obssum = 0.0;
+  for(int i=0; i<4; i++){
+    for(int j=0; j<4; j++){
+      sum += met[i][j] * karray[j] * uarray[i];
+      obssum += met0[i][j] * obskarray[j] * obsuarray[i];
+    }
+  }
+  return obssum/sum;
+}
+
 void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
     int &stop_integration, SurfacePoint **diskdata, const size_t ddsize, QuadTree* tree) {
@@ -298,9 +355,11 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
       if (check == 1) {
         h /= 2.0;
+#ifdef ITER_WARN
         if (iter > MAX_ITER - 10) {
           std::cout << "descale0" << std::endl;
         }
+#endif
       } else if (check == -1)
         h *= 2.0;
 
@@ -344,14 +403,14 @@ void raytrace(long double xobs, long double yobs, long double iobs,
                             // photon escapes to infinity */
       break;
     }
-
+#ifdef ITER_WARN
     if (iter > MAX_ITER - 10) {
       std::cout << "Reaching max iter with..." << std::endl;
       std::cout << h << " " << iter << std::endl;
       std::cout << r << " " << th << " " << phi << std::endl;
       std::cout << rau << " " << thau << " " << phiau << std::endl;
     }
-
+#endif
     if (iter > MAX_ITER) {
       stop_integration = 255;
       break;
@@ -370,9 +429,11 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     //deal with (possible) intersection
 #ifndef xxx
     if (res == INTERSECT) {
+#ifdef ITER_WARN
       if (iter > MAX_ITER - 10) {
         std::cout << "int" << std::endl;
       }
+#endif
       if (check2 != 1) {
         prevh = h;
       }
@@ -403,9 +464,11 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         kr = krau;
         kth = kthau;
         h /= 2.0;
+#ifdef ITER_WARN
         if (iter > MAX_ITER - 10) {
           std::cout << "descale1" << std::endl;
         }
+#endif
       }
     }
 #endif
@@ -421,28 +484,28 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     metric(r, th, met);
     long double met0[4][4];
     metric(r0,th0,met0);
-    //#define CUBE(x) ((x)*(x)*(x))
-    //Real x = std::sqrt(r);
-    //Real p_ut = (0.0 + CUBE(x))/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
-    //Real p_uph = 1/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
-    long double karray[4] = {kt0, kr0, kth0, kphi0};
-    long double uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
+
+    Real x = std::sqrt(r);
+    Real p_ut = (0.0 + CUBE(x))/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
+    Real p_uph = 1/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
     //long double uarray[4] = {p_ut,0.0,0.0,p_uph};
+    //long double uarray[4] = {1,0,0,0};
+    long double uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
+    //correct4VelNorm(r,th,uarray);
+
+    
+    //correctMomentumNorm(r,th,phi,kt0,kr,kth,kphi0);
+    long double karray[4] = {kt0, kr0, kth0, kphi0};
+    
     long double obsuarray[4] = {1.0, 0.0, 0.0, 0.0};
     long double obskarray[4] = {kt0, kr0, kth0, kphi0};
-    long double sum = 0.0;
-    long double obssum = 0.0;
-    for(int i=0; i<4; i++){
-      for(int j=0; j<4; j++){
-        sum += met0[i][j] * karray[j] * uarray[i];
-        obssum += met0[i][j] * obskarray[j] * obsuarray[i];
-      }
-    }
-    //gfactor = kt0/(kt0 * spi.u0 + kr * spi.u1 + kth * spi.u2 + kphi0 * spi.u3);
-    gfactor = obssum / sum;
-    //redshift(xem[1], const1, gfactor);
+
+    gfactor = calcGfactor(met0,met0,karray,uarray,obskarray,obsuarray);
+    //Real gfactor2;
+    //redshift(xem[1], const1, gfactor2);
+
     /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
-    cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
+    cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);    
   } else {
     xem[1] = r;
     gfactor = 1.0;
