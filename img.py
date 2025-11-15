@@ -3,7 +3,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
-from matplotlib.colors import TwoSlopeNorm
+import matplotlib.colors as mcolors
+from matplotlib.ticker import LogLocator
 from sys import argv
 
 def normalize_column(col):
@@ -55,13 +56,25 @@ def main(input_file, output_image, size=1024, use_labels=False):
     else:
         grid_d = griddata((x_norm, y_norm), np.log10(d_raw), (grid_x, grid_y), method='nearest', fill_value=0.0)
 
-        absmax = np.nanmax(np.abs(grid_d))
-        norm = TwoSlopeNorm(vmin=-absmax, vcenter=0.0, vmax=absmax)
+        #absmax = np.nanmax(np.abs(grid_d))
+        #norm = mcolors.TwoSlopeNorm(vmin=-absmax, vcenter=0.0, vmax=absmax)
+        #should yield the same result as the above twoslopenorm:
+        norm = mcolors.CenteredNorm()
+        
+        #lmax = np.nanmax(grid_d)
+        #lmin = np.nanmin(grid_d)
+        #logmax = np.abs(np.log10(lmax))
+        #logmin = np.abs(np.log10(lmin))
+        #if logmax > logmin:
+        #    lmin = 1.0/lmax;
+        #else:
+        #    lmax = 1.0/lmin;
+        #norm = mcolors.LogNorm(vmin=lmin, vmax=lmax)
 
         plt.figure(figsize=(6, 5))
         img = plt.imshow(grid_d, cmap='seismic_r', norm=norm, origin='lower', extent=[0, 1, 0, 1])
         cbar = plt.colorbar(img)
-        cbar.set_label('log_10(g)')
+        cbar.set_label('log10(g)')
         #plt.title("Interpolated Data (log scale)")
         plt.xlabel("Normalized X")
         plt.ylabel("Normalized Y")
