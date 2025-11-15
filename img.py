@@ -53,15 +53,15 @@ def main(input_file, output_image, size=1024, use_labels=False):
         plt.imsave(output_image, rgb_image)
 
     else:
-        grid_d = griddata((x_norm, y_norm), -np.log10(d_raw), (grid_x, grid_y), method='nearest', fill_value=0.0)
+        grid_d = griddata((x_norm, y_norm), np.log10(d_raw), (grid_x, grid_y), method='nearest', fill_value=0.0)
 
         absmax = np.nanmax(np.abs(grid_d))
         norm = TwoSlopeNorm(vmin=-absmax, vcenter=0.0, vmax=absmax)
 
         plt.figure(figsize=(6, 5))
-        img = plt.imshow(grid_d, cmap='seismic', norm=norm, origin='lower', extent=[0, 1, 0, 1])
+        img = plt.imshow(grid_d, cmap='seismic_r', norm=norm, origin='lower', extent=[0, 1, 0, 1])
         cbar = plt.colorbar(img)
-        cbar.set_label('-log_10(g)')
+        cbar.set_label('log_10(g)')
         #plt.title("Interpolated Data (log scale)")
         plt.xlabel("Normalized X")
         plt.ylabel("Normalized Y")
