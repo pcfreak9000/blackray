@@ -34,11 +34,11 @@ def main(input_file, output_image, size=1024, use_labels=False):
         label_colors = {
             255: (1.0, 0.0, 0.0),   # too many iterations, red
             6: (1.0, 0.0, 1.0),   # numerical problems, magenta
-            130: (0.0, 1.0, 0.0),   # backside hit, green
-            131: (0.0, 0.8, 0.0),  # bakside hit, different
+            130: (1.0, 0.647, 0.0),   # backside hit, orange
+            131: (0.9, 0.583, 0.0),  # bakside hit, different
             2: (0.0, 0.0, 1.0),   # miss, blue
             128: (1.0, 1.0, 0.0),   # hit, yellow
-            129: (0.8, 0.8, 0.0),  # hit, different element
+            129: (0.9, 0.9, 0.0),  # hit, different element
             4: (0.0, 0.0, 0.0),   # horizon cross, black
             5: (0.0, 0.2, 0.0),   # horizon cross, green-black
             7: (0.3, 0.3, 0.3)    # escape to infinity, gray
@@ -60,7 +60,7 @@ def main(input_file, output_image, size=1024, use_labels=False):
         #norm = mcolors.TwoSlopeNorm(vmin=-absmax, vcenter=0.0, vmax=absmax)
         #should yield the same result as the above twoslopenorm:
         norm = mcolors.CenteredNorm()
-        
+
         #lmax = np.nanmax(grid_d)
         #lmin = np.nanmin(grid_d)
         #logmax = np.abs(np.log10(lmax))
@@ -74,12 +74,12 @@ def main(input_file, output_image, size=1024, use_labels=False):
         plt.figure(figsize=(6, 5))
         img = plt.imshow(grid_d, cmap='seismic_r', norm=norm, origin='lower', extent=[0, 1, 0, 1])
         cbar = plt.colorbar(img)
-        cbar.set_label('log10(g)')
+        cbar.set_label(r'$\log_{10}(g)$')
         #plt.title("Interpolated Data (log scale)")
         plt.xlabel("Normalized X")
         plt.ylabel("Normalized Y")
         plt.tight_layout()
-        plt.savefig(output_image, dpi=300)
+        plt.savefig(output_image, dpi=600)
         plt.close()
 
 if __name__ == "__main__":
