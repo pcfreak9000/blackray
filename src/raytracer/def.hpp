@@ -90,7 +90,6 @@ void redshift(long double r, long double ktkp, long double &gg);
 void intersection(long double x_1, long double y_1, long double z_1,
     long double x_2, long double y_2, long double z_2, long double x_d[]);
 void metric(long double z1, long double z2, long double mn[][4]);
-void metricKS(Real r, Real th, Real met[4][4], Real metinv[4][4]);
 void metric_rderivatives(long double z1, long double z2, long double dmn[][4]);
 void find_isco(long double z1, long double &isco);
 // void polish_doughnut(long double r, long double theta, long double phi ,long

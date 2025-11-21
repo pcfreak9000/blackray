@@ -63,47 +63,6 @@ bool gluInvertMatrix(const long double m[16], long double invOut[16]) {
   return true;
 }
 
-void metricKS(Real r, Real th, Real met[4][4], Real metinv[4][4]){
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      met[i][j] = 0.0;
-      metinv[i][j] = 0.0;
-    }
-  }
-  Real a2 = SQR(spin);
-  Real a = spin;
-  Real m = 1.0;
-  Real costh = std::cos(th);
-  Real sinth = std::sin(th);
-  Real cos2 = SQR(costh);
-  Real sin2 = SQR(sinth);
-  Real r2 = SQR(r);
-  Real delta = r2 - 2.0*m*r + a2;
-  Real sigma = r2 + a2 * cos2;
-
-  // Set covariant metric coefficients
-  met[0][0] = -(1.0 - 2.0*m*r/sigma);
-  met[0][1] = 2.0*m*r/sigma;
-  met[1][0] = met[0][1];
-  met[0][3] = -2.0*m*a*r/sigma * sin2;
-  met[3][0] = met[0][3];
-  met[1][1] = 1.0 + 2.0*m*r/sigma;
-  met[1][3] = -(1.0 + 2.0*m*r/sigma) * a * sin2;
-  met[3][1] = met[1][3];
-  met[2][2] = sigma;
-  met[3][3] = (r2 + a2 + 2.0*m*a2*r/sigma * sin2) * sin2;
-
-  // Set contravariant metric coefficients
-  metinv[0][0] = -(1.0 + 2.0*m*r/sigma);
-  metinv[0][1] = 2.0*m*r/sigma;
-  metinv[1][0] = metinv[0][1];
-  metinv[1][1] = delta/sigma;
-  metinv[1][3] = a/sigma;
-  metinv[3][1] = metinv[1][3];
-  metinv[2][2] = 1.0/sigma;
-  metinv[3][3] = 1.0 / (sigma * sin2);
-}
-
 void metric(long double r, long double th, long double mn[][4]) {
   long double t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
       t16;
@@ -112,14 +71,17 @@ void metric(long double r, long double th, long double mn[][4]) {
   t1 = cos(th);
   t2 = spin * spin;
   t3 = r * r;
-  t4 = pow(t3, 0.2e1);
+  //t4 = pow(t3, 0.2e1);
+  t4 = SQR(t3);
   t5 = t3 * t4;
-  t1 = t2 * pow(t1, 0.2e1);
+  //t1 = t2 * pow(t1, 0.2e1);
+  t1 = t2 * SQR(t1);
   t6 = (t1 + t3) * r + epsi3;
   t7 = a22 + t3;
   t8 = sin(th);
   t9 = t3 + t2;
-  t8 = pow(t8, 0.2e1);
+  //t8 = pow(t8, 0.2e1);
+  t8 = SQR(t8);
   t10 = r * t3 + a13;
   t11 = -t2 * r * t7 * t8 + t10 * t9;
   t12 = -0.2e1 * r + t9;
@@ -128,14 +90,15 @@ void metric(long double r, long double th, long double mn[][4]) {
   t15 = t2 * a22;
   t16 = 0.1e1 / t12;
   t13 = 0.1e1 / t13;
-  t11 = pow(t11, -0.2e1);
+  //t11 = pow(t11, -0.2e1);
+  t11 = 1.0 / SQR(t11);
 
-  g_tt = t6 * (t2 * pow(t7, 0.2e1) * t8 + 0.2e1 * r * t4 - t4 * t9) * r * t11;
+  g_tt = t6 * (t2 * SQR(t7) * t8 + 2.0 * r * t4 - t4 * t9) * r * t11;
   g_rr = t6 * r * t16 * t13;
   g_thth = t14 * epsi3 + t1 + t3;
-  g_pp = (pow(t9, 0.2e1) * pow(t10, 0.2e1) - t2 * t5 * t12 * t8) * t6 * t8 * t11
+  g_pp = (SQR(t9) * SQR(t10) - t2 * t5 * t12 * t8) * t6 * t8 * t11
       * t14;
-  g_tp = -(0.2e1 * t5
+  g_tp = -(2.0 * t5
       + t3 * (a13 * (a22 + t2) + ((r * a22 + a13) * r + t15) * r) + t15 * a13)
       * spin * t6 * t8 * t11;
 
@@ -144,19 +107,13 @@ void metric(long double r, long double th, long double mn[][4]) {
       mn[i][j] = 0.0;
     }
   }
-#ifdef FLAT_SPACETIME
-  mn[0][0] = -1;
-  mn[1][1] = 1;
-  mn[2][2] = r*r;
-  mn[3][3] = r*r*t8*t8;
-#else
+
   mn[0][0] = g_tt;
   mn[0][3] = g_tp;
   mn[1][1] = g_rr;
   mn[2][2] = g_thth;
   mn[3][0] = mn[0][3];
   mn[3][3] = g_pp;
-#endif
 }
 void metric_inv(long double r, long double th, long double mn[][4]) {
   metric(r, th, mn);

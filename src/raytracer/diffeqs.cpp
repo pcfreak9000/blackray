@@ -19,18 +19,22 @@ void diffeqs(long double b, long double vars[], long double diffs[]) {
 
   t1 = cos(th);
   t2 = r * r; //r^2
-  t3 = pow(t2, 0.2e1); //r^4
+  //t3 = pow(t2, 0.2e1); //r^4
+  t3 = SQR(t2);
   t4 = t2 * t3; //r^6
   t5 = r * t3; //r^5
   t6 = r * t2; //r^3
   t7 = spin * spin;
-  t8 = t7 * pow(t1, 0.2e1);
+  //t8 = t7 * pow(t1, 0.2e1);
+  t8 = t7 * SQR(t1);
   t9 = (t8 + t2) * r + epsi3;
   t10 = a22 + t2;
   t11 = sin(th);
   t12 = t7 + t2;
-  t13 = pow(t10, 0.2e1);
-  t14 = pow(t11, 0.2e1);
+  //t13 = pow(t10, 0.2e1);
+  t13 = SQR(t10);
+  //t14 = pow(t11, 0.2e1);
+  t14 = SQR(t11);
   t15 = t7 * t13 * t14;
   t17 = a13 + t6;
   t18 = t7 * r;
@@ -39,7 +43,8 @@ void diffeqs(long double b, long double vars[], long double diffs[]) {
   t21 = t20 - t19;
   t22 = 2.0 * r;
   t23 = -t22 + t12;
-  t17 = pow(t12, 0.2e1) * pow(t17, 0.2e1) - t7 * t4 * t23 * t14;
+  //t17 = pow(t12, 0.2e1) * pow(t17, 0.2e1) - t7 * t4 * t23 * t14;
+  t17 = SQR(t12) * SQR(t17) - t7 * t4 * t23 * t14;
   t24 = a22 + t7;
   t25 = r * a22;
   t26 = t7 * a13;
@@ -53,7 +58,8 @@ void diffeqs(long double b, long double vars[], long double diffs[]) {
   t32 = (t31 + t2) * r + 0.2e1 / 0.5e1 * a13;
   t31 = r * t32 - t31 * (a22 / 0.3e1 + t2) * t14;
   t33 = 0.1e1 / t21;
-  t35 = pow(t33, 0.2e1);
+  //t35 = pow(t33, 0.2e1);
+  t35 = SQR(t33);
   t36 = t33 * t35;
   t37 = 0.3e1 * t29;
   t38 = t35 * t14;
@@ -68,7 +74,8 @@ void diffeqs(long double b, long double vars[], long double diffs[]) {
   t45 = 0.1e1 / t9;
   t46 = 0.1e1 / t27;
   t47 = 0.1e1 / t23;
-  t48 = pow(t21, 0.2e1);
+  //t48 = pow(t21, 0.2e1);
+  t48 = SQR(t21);
   t19 = 2.0 * t4 * t1 * spin * t11 *
         (t18 * t14 *
              (t19 + a22 * epsi3 -
@@ -81,8 +88,8 @@ void diffeqs(long double b, long double vars[], long double diffs[]) {
             r +
         t3 * (a52 * (-6.0) - 0.3e1 * epsi3) + (-t2 * t40 + t39) * epsi3 +
         4.0 * (epsi3 + t39) * t6) *
-       pow(t47, 0.2e1) * pow(t46, 0.2e1);
-
+//       pow(t47, 0.2e1) * pow(t46, 0.2e1);
+         SQR(t47) * SQR(t46);
   g_tt = t5;
   g_pp = t43 * t17 * t14 * t48;
   g_tp = -t4 * t9 * spin * t14 * t48;
@@ -101,7 +108,8 @@ void diffeqs(long double b, long double vars[], long double diffs[]) {
                  t25 * (0.5e1 / 0.12e2 * t2 + t7 / 0.4e1)) *
                 t9);
   dgrrdr = t6;
-  dgththdr = -epsi3 * pow(t42, 0.2e1) + t22;
+  //dgththdr = -epsi3 * pow(t42, 0.2e1) + t22;
+  dgththdr = -epsi3 * SQR(t42) + t22;
   dgppdr =
       0.10e2 * t38 * t9 *
           (-t31 * t17 * t33 * t42 + t20 * t32 -
