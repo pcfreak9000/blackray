@@ -49,10 +49,18 @@ using Real = long double;
 #define INTERSECT 0
 #define SQR(x) ((x)*(x))
 #define CUBE(x) ((x)*(x)*(x))
+
+
 #define DEBUG_DIV 1.0
 #define RING_DIV 15
 #define MAX_ITER 5000
+//Warn about approach to max iterations:
 //#define ITER_WARN
+//Warn about strongly deviating 4-velocity norms from the disk at emission points:
+//#define DEBUG_FVEL_NORM
+//Warn about and fix cosem>1.0.
+//#define DEBUG_COSEM
+
 class QuadTree {
 public:
   QuadTree(Real x, Real y, Real width, Real height);

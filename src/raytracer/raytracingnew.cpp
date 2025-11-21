@@ -92,6 +92,11 @@ void scalarProduct(Real met[4][4], Real* fvec0, Real* fvec1, Real& scal) {
   }
 }
 
+void correct4VelNorm(Real met[4][4], Real norm, Real* fvel) {
+  Real dif = norm+1;
+  Real deltaut = dif/met[0][0];
+  fvel[0] = sqrt(fvel[0]*fvel[0]-deltaut);
+}
 
 void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
@@ -447,7 +452,25 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     //Real p_uph = 1/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
     //long double uarray[4] = {p_ut,0.0,0.0,p_uph};
     //long double uarray[4] = {1,0,0,0};
-    long double uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
+    Real uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
+    //to fix any inconsistencies introduced by linear interpolation or the change of coordinate chart (KS->BL)
+    //or code differences between Athena++ and Blackray or simply numerical issues in the entire pipeline
+    //the fix is done by recalculating (only) the time component of the 4-velocity so that the normalization is correct, i.e. far closer to -1.
+    //the highest delta |spi.u0-fixedu0| is approximately 0.05 for an average disk.
+    Real norm;
+    scalarProduct(met, uarray, uarray, norm);
+    correct4VelNorm(met, norm, uarray);
+#ifdef DEBUG_FVEL_NORM
+    if(norm > -0.97 || norm < -1.03) {
+      Real newnorm;
+      scalarProduct(met, uarray, uarray, newnorm);
+      std::cout << "4-Vel norm deviates significantly" << std::endl;
+      std::cout << "Old norm: " << norm << std::endl;
+      std::cout << "Fixed norm: " << newnorm << std::endl;
+      std::cout << "Delta components: " << spi.u0-uarray[0] << " " << spi.u1-uarray[1] << " " << spi.u2-uarray[2] << " " << spi.u3-uarray[3] << " " << std::endl;
+      stop_integration = 6;
+    }
+#endif
     
     Real g_tt, g_pp, g_tp;
     g_tt = met[0][0];
@@ -473,6 +496,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     gfactor = 1.0;
     cosem = 0.0;
   }
+#ifdef DEBUG_COSEM
   if(cosem > 1.05) {
     std::cout << "Cosem > 1.05 detected, ignoring ray: " << cosem << std::endl;
     stop_integration = 6;
@@ -484,6 +508,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     std::cout << "1.05 >= Cosem > 1.0 detected, clamping to 1.0: " << cosem << std::endl;
     cosem = 1.0;
   }
+#endif
   hit.cosem = cosem;
   hit.r = xem[1];
   hit.gfactor = gfactor;
