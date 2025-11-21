@@ -53,7 +53,6 @@ using Real = long double;
 #define RING_DIV 15
 #define MAX_ITER 5000
 //#define ITER_WARN
-//#define FLAT_SPACETIME does not work because not all occurences of the metric actually use the metric cpp files so this would require some major refactoring
 class QuadTree {
 public:
   QuadTree(Real x, Real y, Real width, Real height);

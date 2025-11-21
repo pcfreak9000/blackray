@@ -6,15 +6,18 @@ void metric_rderivatives(long double r, long double th, long double dmn[][4]) {
   t1 = cos(th);
   t2 = spin * spin;
   t3 = r * r;
-  t4 = pow(t3, 0.2e1);
+  //t4 = pow(t3, 0.2e1);
+  t4 = SQR(t3);
   t5 = t3 * t4;
-  t1 = t2 * pow(t1, 0.2e1);
+  //t1 = t2 * pow(t1, 0.2e1);
+  t1 = t2 * SQR(t1);
   t6 = (t1 + t3) * r + epsi3;
   t7 = a22 + t3;
   t8 = sin(th);
   t9 = t3 + t2;
   t10 = -0.2e1 * r + t9;
-  t8 = pow(t8, 0.2e1);
+  //t8 = pow(t8, 0.2e1);
+  t8 = SQR(t8);
   t11 = r * t3 + a13;
   t12 = t9 * t11;
   t13 = -t2 * r * t7 * t8 + t12;
@@ -24,19 +27,22 @@ void metric_rderivatives(long double r, long double th, long double dmn[][4]) {
   t16 = (t15 + t3) * r + 0.2e1 / 0.5e1 * a13;
   t15 = r * t16 - t15 * (a22 / 0.3e1 + t3) * t8;
   t13 = 0.1e1 / t13;
-  t17 = pow(t13, 0.2e1);
+  //t17 = pow(t13, 0.2e1);
+  t17 = SQR(t13);
   t18 = 0.3e1 * t1;
   t19 = a22 + t2;
   t20 = r * a22;
   t21 = t2 * a22;
   t22 = 0.1e1 / 0.2e1;
   t23 = t17 * t8;
-  t9 = -t2 * t5 * t10 * t8 + pow(t9, 0.2e1) * pow(t11, 0.2e1);
+  //t9 = -t2 * t5 * t10 * t8 + pow(t9, 0.2e1) * pow(t11, 0.2e1);
+  t9 = -t2 * t5 * t10 * t8 + SQR(t9) * SQR(t11);
   t11 = 0.1e1 / r;
 
   dgttdr =
       t17 * ((t6 * (0.10e2 * r * t15 * t13 - 0.1e1) - t18 * r) *
-                 (-t2 * pow(t7, 0.2e1) * t8 + t10 * t4) -
+//                 (-t2 * pow(t7, 0.2e1) * t8 + t10 * t4) -
+          (-t2 * SQR(t7) * t8 + t10 * t4) -
              0.6e1 * t6 *
                  (t3 * ((-0.5e1 / 0.3e1 + r) * r + t14) - t14 * t7 * t8) * t3);
   dgtpdr =
@@ -58,13 +64,8 @@ void metric_rderivatives(long double r, long double th, long double dmn[][4]) {
       dmn[i][j] = 0.0;
     }
   }
-#ifdef FLAT_SPACETIME
-  dmn[2][2] = 2*r;
-  dmn[3][3] = 2*r*t8*t8;
-#else
   dmn[0][0] = dgttdr;
   dmn[0][3] = dgtpdr;
   dmn[3][0] = dmn[0][3];
   dmn[3][3] = dgppdr;
-#endif
 }
