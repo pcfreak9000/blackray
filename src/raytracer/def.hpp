@@ -82,7 +82,7 @@ Real checkIntersect(long double x1, long double y1, long double x2,
     long double y4);
 void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
-    int &stop_integration, SurfacePoint **diskdata, const size_t ddsize, QuadTree* tree);
+    int &stop_integration, SurfacePoint **diskdata, const size_t ddsize, QuadTree* tree, Real checkr);
 void diffeqs(long double b, long double vars[], long double diffs[]);
 void redshift(long double r, long double ktkp, long double &gg);
 // void redshift_polish_doughnut(long double r, long double th, long double l

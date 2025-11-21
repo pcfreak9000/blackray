@@ -92,21 +92,10 @@ void scalarProduct(Real met[4][4], Real* fvec0, Real* fvec1, Real& scal) {
   }
 }
 
-Real calcGfactor(Real met[4][4], Real met0[4][4], Real* karray, Real* uarray, Real* obskarray, Real* obsuarray){
-  long double sum = 0.0;
-  long double obssum = 0.0;
-  for(int i=0; i<4; i++){
-    for(int j=0; j<4; j++){
-      sum += met[i][j] * karray[j] * uarray[i];
-      obssum += met0[i][j] * obskarray[j] * obsuarray[i];
-    }
-  }
-  return obssum/sum;
-}
 
 void raytrace(long double xobs, long double yobs, long double iobs,
     long double rin, long double disk_length_combined, RayHit &hit,
-    int &stop_integration, SurfacePoint **diskdata, const size_t ddsize, QuadTree* tree) {
+    int &stop_integration, SurfacePoint **diskdata, const size_t ddsize, QuadTree* tree, Real checkr) {
   long double dobs;
   long double xobs2, yobs2;
   long double atol, rtol;
@@ -386,8 +375,11 @@ void raytrace(long double xobs, long double yobs, long double iobs,
       break;
     }
 
-//check if the new position intersects the accretion disk
-    //convert coordinates of current and previous position via BL-cartesian conversion
+    //not at all close to disk so we don't need to perform the checks below
+    if(r > checkr) continue;
+
+    //check if the new position intersects the accretion disk
+    //convert coordinates of current and previous position via a BL-cartesian conversion
     long double xcoord = std::sqrt(r * r + spin2) * sin(th);
     long double ycoord = r * cos(th);
     long double xcoordprev = std::sqrt(rau * rau + spin2) * sin(thau);
@@ -397,7 +389,6 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
     res = get_interpolated_sp(xcoordprev,ycoordprev,xcoord,ycoord,tree,spi,index);
     //deal with (possible) intersection
-#ifndef xxx
     if (res == INTERSECT) {
 #ifdef ITER_WARN
       if (iter > MAX_ITER - 10) {
@@ -441,7 +432,6 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 #endif
       }
     }
-#endif
   } while (stop_integration == 0);
 
   if (stop_integration >= 128 && stop_integration <= 131) {

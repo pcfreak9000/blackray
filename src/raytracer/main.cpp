@@ -230,6 +230,8 @@ int main(int argc, char *argv[]) {
     tree.put_element(elem);
   }
   tree.validate();
+
+
   /* ----- Set free parameters ----- */
 
   // Input parameters: spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep
@@ -244,6 +246,11 @@ int main(int argc, char *argv[]) {
   pstep = atof(argv[9]);
 
   spin2 = spin * spin;
+
+  Real maxr_xdir = sqrt(SQR(maxx+1.0)-spin2)+1.0;
+  Real maxr_ydir = sqrt(SQR(maxy+1.0))+1.0;
+  Real checkr = maxr_ydir;
+  if(maxr_xdir > maxr_ydir) checkr = maxr_xdir;
 
   iobs = Pi / 180 * iobs_deg; /* inclination angle of the observer in rad */
   // iobs = acos(iobs_deg);
@@ -303,6 +310,7 @@ int main(int argc, char *argv[]) {
   std::ofstream tmpOutFile(outtxt);
   std::cout << "Starting raytracing loop" << std::endl;
   unsigned long long raycount = 0;
+  unsigned long long hitraycount = 0;
   /* ----- assign photon position in the grid ----- */
   for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
     std::cout << "Raytracing: " << (robs - robs_i) / (robs_f - robs_i)
@@ -316,10 +324,11 @@ int main(int argc, char *argv[]) {
       /*entering in raytrace_new.cpp*/
       // printf("entering in the raytrace part of the code\n");
       raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition,
-          diskdata.data(), diskdata.size(), treep);
+          diskdata.data(), diskdata.size(), treep, checkr);
       raycount++;
       if (stop_integration_condition >= 128
           && stop_integration_condition <= 131) {
+        hitraycount++;
         fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", photon_index, xobs,
             yobs, hit.r, hit.gfactor, hit.cosem);
 
@@ -353,7 +362,7 @@ int main(int argc, char *argv[]) {
     }
   }
 //  tree.validate();
-  std::cout << "Integrated " << raycount << " rays" << std::endl;
+  std::cout << "Integrated " << raycount << " rays of which " << hitraycount << " hit the disk" << std::endl;
   std::cout << "Finishing..." << std::endl;
   tmpOutFile.close();
   /* --- print spectrum --- */
