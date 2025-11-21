@@ -63,6 +63,47 @@ bool gluInvertMatrix(const long double m[16], long double invOut[16]) {
   return true;
 }
 
+void metricKS(Real r, Real th, Real met[4][4], Real metinv[4][4]){
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      met[i][j] = 0.0;
+      metinv[i][j] = 0.0;
+    }
+  }
+  Real a2 = SQR(spin);
+  Real a = spin;
+  Real m = 1.0;
+  Real costh = std::cos(th);
+  Real sinth = std::sin(th);
+  Real cos2 = SQR(costh);
+  Real sin2 = SQR(sinth);
+  Real r2 = SQR(r);
+  Real delta = r2 - 2.0*m*r + a2;
+  Real sigma = r2 + a2 * cos2;
+
+  // Set covariant metric coefficients
+  met[0][0] = -(1.0 - 2.0*m*r/sigma);
+  met[0][1] = 2.0*m*r/sigma;
+  met[1][0] = met[0][1];
+  met[0][3] = -2.0*m*a*r/sigma * sin2;
+  met[3][0] = met[0][3];
+  met[1][1] = 1.0 + 2.0*m*r/sigma;
+  met[1][3] = -(1.0 + 2.0*m*r/sigma) * a * sin2;
+  met[3][1] = met[1][3];
+  met[2][2] = sigma;
+  met[3][3] = (r2 + a2 + 2.0*m*a2*r/sigma * sin2) * sin2;
+
+  // Set contravariant metric coefficients
+  metinv[0][0] = -(1.0 + 2.0*m*r/sigma);
+  metinv[0][1] = 2.0*m*r/sigma;
+  metinv[1][0] = metinv[0][1];
+  metinv[1][1] = delta/sigma;
+  metinv[1][3] = a/sigma;
+  metinv[3][1] = metinv[1][3];
+  metinv[2][2] = 1.0/sigma;
+  metinv[3][3] = 1.0 / (sigma * sin2);
+}
+
 void metric(long double r, long double th, long double mn[][4]) {
   long double t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
       t16;

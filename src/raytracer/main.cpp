@@ -262,12 +262,12 @@ int main(int argc, char *argv[]) {
 
   /*** thin disk parameters  ***/
   xin = isco; /* inner radius of the accretion disk; set isco */
-  xout = 60; /* outer radius of the accretion disk */
+  xout = 200; /* outer radius of the accretion disk */
 
   /* ----- Set computational parameters ----- */
 
   robs_i = 1;
-  robs_f = 65;
+  robs_f = 215;
 
   // rstep  = 1.008;
   rstep2 = (rstep - 1) / rstep;

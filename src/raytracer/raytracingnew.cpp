@@ -1,4 +1,50 @@
 
+void TransformContravariantFromBoyerLindquist(Real at_bl, Real ar_bl, Real ath_bl,
+    Real aph_bl, Real x1, Real x2, Real x3, Real *p_a0, Real *p_a1, Real *p_a2,
+    Real *p_a3) {
+    Real delta = SQR(x1) - 2.0 * 1.0 * x1 + SQR(spin);
+    *p_a0 = at_bl + 2.0 * 1.0 * x1 / delta * ar_bl;
+    *p_a1 = ar_bl;
+    *p_a2 = ath_bl;
+    *p_a3 = aph_bl + spin / delta * ar_bl;
+}
+
+void TransformContravariantToBoyerLindquist(Real p_a0, Real p_a1, Real p_a2, Real p_a3, Real x1, Real x2, Real x3, Real *at_bl, Real *ar_bl, Real *ath_bl,
+    Real *aph_bl) {
+    Real delta = SQR(x1) - 2.0 * 1.0 * x1 + SQR(spin);
+    *at_bl = p_a0 - 2.0 * 1.0 * x1 / delta * p_a1;
+    *ar_bl = p_a1;
+    *ath_bl = p_a2;
+    *aph_bl = p_a3 - 1.0 / delta * p_a1;
+}
+
+void TransformContravariantKSFToLNRF(Real r, Real th, Real ph, Real ksf0_bl, Real ksf1_bl, Real ksf2_bl, Real ksf3_bl, Real* lnrf0_bl, Real* lnrf1_bl, Real* lnrf2_bl, Real* lnrf3_bl){
+  Real metinv[4][4];
+  Real met[4][4];
+  metricKS(r,th,met,metinv);
+  Real a = spin;
+  Real m = 1.0;
+  Real sigma = SQR(r) + SQR(a) * SQR(std::cos(th));                       // \Sigma
+  Real betar = (2*m*r/sigma) / (1 + 2*m*r/sigma);
+  Real alpha = std::sqrt(-1.0 / metinv[0][0]);
+  Real n_0 = -alpha;
+  Real n1 = metinv[1][0]*n_0;
+  Real yrr = metinv[1][1] + n1*n1;
+  Real y_thth = met[2][2];
+  Real y_phph = met[3][3];
+  Real y_rph = met[1][3];
+  Real istyrr = 1.0 / std::sqrt(yrr);
+  Real sty_phph = std::sqrt(y_phph);
+  Real sty_thth = std::sqrt(y_thth);
+  Real ksf0,ksf1,ksf2,ksf3;
+  TransformContravariantFromBoyerLindquist(ksf0_bl,ksf1_bl,ksf2_bl,ksf3_bl,r,th,ph,&ksf0,&ksf1,&ksf2,&ksf3);
+  Real lnrf0, lnrf1, lnrf2, lnrf3;
+  lnrf0 = ksf0*alpha + ksf1*betar*istyrr + ksf2*0.0      + ksf3*betar*y_rph/sty_phph;
+  lnrf1 = ksf0*0.0   + ksf1*istyrr       + ksf2*0.0      + ksf3*y_rph/sty_phph;
+  lnrf2 = ksf0*0.0   + ksf1*0.0          + ksf2*sty_thth + ksf3*0.0;
+  lnrf3 = ksf0*0.0   + ksf1*0.0          + ksf2*0.0      + ksf3*sty_phph;
+  TransformContravariantToBoyerLindquist(lnrf0,lnrf1,lnrf2,lnrf3,r,th,ph,lnrf0_bl,lnrf1_bl,lnrf2_bl,lnrf3_bl);
+}
 
 
 long double interpolate(long double a, long double b, long double f) {
@@ -95,7 +141,15 @@ Real calcNorm(Real r, Real th, Real* vec){
   }
   return norm;
 }
-
+Real calcNormM(Real r, Real th, Real* vec, Real met[4][4]){
+  Real norm = 0.0;
+  for(int i=0; i<4; i++) {
+    for(int j=0; j<4; j++) {
+      norm += met[i][j]*vec[i]*vec[j];
+    }
+  }
+  return norm;
+}
 void correctMomentumNorm(Real r, Real th, Real& kt, Real& kr, Real& kth, Real& kph) {
   Real met[4][4];
   metric(r,th,met);
@@ -378,7 +432,6 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     phi = vars_4th[2];
     kr = vars_4th[3];
     kth = vars_4th[4];
-
     Delta = r * r - 2.0 * r + spin2;
 //check if the new position ends the integration
     if (Delta < 1.0e-3) {
@@ -476,36 +529,45 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
   if (stop_integration >= 128 && stop_integration <= 131) {
     xem[1] = r;
-    //we also need the density at the point of the hit... for what????
 
     //to calculate the redshift, we need the photon momentum k (which is present with kr and kth, kt=-E=kt0, kphi=L=kphi0) the observer 4-vel,
     //which is (1,0,0,0), and the interpolated 4-vel of the disk. With this, we can calculate the gfactor.
-    //do we need the metric or is it contained in the kvector already???
     metric(r, th, met);
     long double met0[4][4];
     metric(r0,th0,met0);
 
-    Real x = std::sqrt(r);
-    Real p_ut = (0.0 + CUBE(x))/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
-    Real p_uph = 1/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
+
+    //Real x = std::sqrt(r);
+    //Real p_ut = (0.0 + CUBE(x))/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
+    //Real p_uph = 1/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
     //long double uarray[4] = {p_ut,0.0,0.0,p_uph};
     //long double uarray[4] = {1,0,0,0};
     long double uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
-    //correct4VelNorm(r,th,uarray);
+    
+    Real g_tt, g_pp, g_tp;
+    g_tt = met[0][0];
+    g_pp = met[3][3];
+    g_tp = met[0][3];
+    Real denom = (g_tt * g_pp - g_tp * g_tp);
+    Real ktcalc = -(g_pp + b * g_tp) / denom;
+    Real kphicalc = (g_tp + b * g_tt) / denom;
+    Real karray[4] = {ktcalc, kr, kth, kphicalc};
 
     
-    //correctMomentumNorm(r,th,phi,kt0,kr,kth,kphi0);
-    long double karray[4] = {kt0, kr0, kth0, kphi0};
-    
-    long double obsuarray[4] = {1.0, 0.0, 0.0, 0.0};
-    long double obskarray[4] = {kt0, kr0, kth0, kphi0};
 
-    gfactor = calcGfactor(met0,met0,karray,uarray,obskarray,obsuarray);
-    //Real gfactor2;
-    //redshift(xem[1], const1, gfactor2);
 
+
+
+    Real obsuarray[4] = {1.0, 0.0, 0.0, 0.0};
+    Real obskarray[4] = {kt0, kr0, kth0, kphi0};
+
+    gfactor = calcGfactor(met,met0,karray,uarray,obskarray,obsuarray);
+
+    //cosem stays artifical
+    Real gfactorforcosem;
+    redshift(xem[1],const1,gfactorforcosem);
     /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
-    cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);    
+    cosem = carter * gfactorforcosem / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
   } else {
     xem[1] = r;
     gfactor = 1.0;
