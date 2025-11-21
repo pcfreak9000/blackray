@@ -481,6 +481,15 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     Real kphicalc = (g_tp + b * g_tt) / denom;
     Real karray[4] = {ktcalc, kr, kth, kphicalc};
 
+#ifdef DEBUG_FMOM_NORM
+    Real knorm;
+    scalarProduct(met, karray, karray, knorm);
+    if(knorm > 0.03 || knorm < -0.03) {
+      std::cout << "4-Momentum norm deviates significantly" << std::endl;
+      std::cout << "Norm: " << knorm << std::endl;
+      stop_integration = 6;
+    }
+#endif
     
     Real emenergy;
     scalarProduct(met, uarray, karray, emenergy);
