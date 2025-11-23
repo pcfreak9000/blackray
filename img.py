@@ -43,15 +43,16 @@ def main(input_file, output_image, size=1024, use_labels=False):
             5: (0.0, 0.2, 0.0),   # horizon cross, green-black
             7: (0.3, 0.3, 0.3)    # escape to infinity, gray
         }
-
+        interpolmeth='linear'
         # Prepare RGB channels
-        grid_r = griddata((x_norm, 1.0-y_norm), [label_colors[l][0] for l in label_raw], (grid_x, grid_y), method='nearest', fill_value=0)
-        grid_g = griddata((x_norm, 1.0-y_norm), [label_colors[l][1] for l in label_raw], (grid_x, grid_y), method='nearest', fill_value=0)
-        grid_b = griddata((x_norm, 1.0-y_norm), [label_colors[l][2] for l in label_raw], (grid_x, grid_y), method='nearest', fill_value=0)
+        grid_r = griddata((x_norm, 1.0-y_norm), [label_colors[l][0] for l in label_raw], (grid_x, grid_y), method=interpolmeth, fill_value=0)
+        grid_g = griddata((x_norm, 1.0-y_norm), [label_colors[l][1] for l in label_raw], (grid_x, grid_y), method=interpolmeth, fill_value=0)
+        grid_b = griddata((x_norm, 1.0-y_norm), [label_colors[l][2] for l in label_raw], (grid_x, grid_y), method=interpolmeth, fill_value=0)
 
         # Stack to RGB image
         rgb_image = np.stack([grid_r, grid_g, grid_b], axis=2)
-        plt.imsave(output_image, rgb_image)
+        rgb_image_cl = np.clip(rgb_image, min=0.0, max=1.0)
+        plt.imsave(output_image, rgb_image_cl)
 
     else:
         grid_d = griddata((x_norm, y_norm), np.log10(d_raw), (grid_x, grid_y), method='nearest', fill_value=0.0)
