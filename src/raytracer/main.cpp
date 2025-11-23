@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
   long double spin2;
   long double E_line, N_0, N_tot, N_tot1, N_tot2, alpha;
   long double iobs, dobs;
-  long double robs, pobs;
+  long double robs;//, pobs;
   long double robs_i, robs_f, rstep, rstep2, pstep;
   long double xin, xout;
   long double pp, qq;
@@ -155,10 +155,11 @@ int main(int argc, char *argv[]) {
 
   long double E_obs[imax];
   long double N_obs[imax];
-  long double fphi[imax], fphi0[imax];
-  RayHit hit;
+  long double fphi[imax];
+  long double fphi0[imax];
 
-  int stop_integration_condition = 0;
+
+
   int n1, n2, n3;
   int i, j, m;
   int photon_index = 0;
@@ -311,20 +312,45 @@ int main(int argc, char *argv[]) {
   std::cout << "Starting raytracing loop" << std::endl;
   unsigned long long raycount = 0;
   unsigned long long hitraycount = 0;
-  /* ----- assign photon position in the grid ----- */
+  
+  std::vector<long double> pobs_vec;
+  for (long double pobs = 0; pobs < 2 * Pi - 0.5 * pstep; pobs = pobs + pstep) {
+    pobs_vec.push_back(pobs);
+  }
+  size_t pobs_count = pobs_vec.size();
+  long double* pobs_data = pobs_vec.data();
+  
+  std::vector<long double> robs_vec;
   for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
+    robs_vec.push_back(robs);
+  }
+  size_t robs_count = robs_vec.size();
+  long double* robs_data = robs_vec.data();
+  
+  /* ----- assign photon position in the grid ----- */
+  for(size_t robs_index = 0; robs_index < robs_count; robs_index++){
+  long double robs = robs_data[robs_index];
+  //for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
     std::cout << "Raytracing: " << (robs - robs_i) / (robs_f - robs_i)
         << std::endl;
     for (i = 0; i <= imax - 1; i++)
       fphi[i] = 0;
 
-    for (pobs = 0; pobs < 2 * Pi - 0.5 * pstep; pobs = pobs + pstep) {
+    #pragma omp parallel for ordered schedule(dynamic)
+    for(size_t pobs_index = 0; pobs_index < pobs_count; pobs_index++){
+      long double pobs = pobs_data[pobs_index];
+    //for (long double pobs = 0; pobs < 2 * Pi - 0.5 * pstep; pobs = pobs + pstep) {
+      long double xobs, yobs;
       xobs = robs * cos(pobs);
       yobs = robs * sin(pobs);
       /*entering in raytrace_new.cpp*/
       // printf("entering in the raytrace part of the code\n");
+        int stop_integration_condition = 0;
+          RayHit hit;
       raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition,
           diskdata.data(), diskdata.size(), treep, checkr);
+      #pragma omp ordered
+      { 
       raycount++;
       if (stop_integration_condition >= 128
           && stop_integration_condition <= 131) {
@@ -352,6 +378,7 @@ int main(int argc, char *argv[]) {
       } else {
         tmpOutFile << xobs << " " << yobs << " " << 1.0 << " "
             << stop_integration_condition << " " << hit.hc << std::endl;
+      }
       }
     }
     /* --- integration - part 2 --- */

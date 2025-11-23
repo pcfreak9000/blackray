@@ -14,7 +14,7 @@ using namespace std;
 
 const long double Pi = acos(-1.0);
 
-long double xobs, yobs;
+
 long double epsi3, a13, a22, a52;
 long double spin;
 long double iobs_deg;
