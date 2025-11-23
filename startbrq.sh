@@ -38,8 +38,15 @@ for incl in "${incls[@]}"; do
       export DISKLOC="$workdirbase"/"dshape$accrate.csv"
       mkdir -p "$WORKDIR"
       if [ "$BINAC2" ]; then
-        sbatch --partition compute -t 20:00:00 -N 1 --ntasks-per-node=1 --cpus-per-task 2 --mem-per-cpu=8gb -J br_"$myname"_"$incl"_"$alpha"_"$accrate" --output="$WORKDIR"/LOG_BR --error="$WORKDIR"/LOG_BR --export=ALL startjobbr.sh
+        export OMP_NUM_THREADS=64
+        sbatch --partition compute -t 8:00:00 -N 1 --ntasks-per-node=$OMP_NUM_THREADS --cpus-per-task 2 --mem-per-cpu=8gb -J br_"$myname"_"$incl"_"$alpha"_"$accrate" --output="$WORKDIR"/LOG_BR --error="$WORKDIR"/LOG_BR --export=ALL startjobbr.sh
       else
+        if [ "$P9000_WORKER_THREADS" ]; then
+          echo "Using $P9000_WORKER_THREADS threads"
+          export OMP_NUM_THREADS=$P9000_WORKER_THREADS
+        else
+          export OMP_NUM_THREADS=1
+        fi
         ./startjobbr.sh 2>&1 | tee "$WORKDIR"/LOG_BR
       fi
     done
