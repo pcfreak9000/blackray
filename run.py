@@ -30,9 +30,9 @@ def main(**kwargs):
     a52 = 0
     alpha = kwargs['alpha']
 
-    Nr = 4500 #1000
-    Nph = 1800 #400
-    Rmax = 200
+    Nr = 1000 #1000
+    Nph = 400 #400
+    Rmax = 133
     rstep  = np.e**((np.log(Rmax)-np.log(np.abs(np.cos(np.pi*incl/180))))/Nr);
     pstep  = 2*np.pi/Nph;
     print("rstep: "+str(rstep))
