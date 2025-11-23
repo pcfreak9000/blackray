@@ -4,11 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 import matplotlib.colors as mcolors
-from matplotlib.ticker import LogLocator
+import matplotlib.ticker as ticker
 from sys import argv
 
 def normalize_column(col):
     return (col - np.min(col)) / (np.max(col) - np.min(col))
+
+def fmt(x, pos):
+    return '{:.3f}'.format(x)
 
 def main(input_file, output_image, size=1024, use_labels=False):
     # Load the data
@@ -74,8 +77,10 @@ def main(input_file, output_image, size=1024, use_labels=False):
 
         plt.figure(figsize=(6, 5))
         img = plt.imshow(grid_d, cmap='seismic_r', norm=norm, origin='lower', extent=[0, 1, 0, 1])
-        cbar = plt.colorbar(img)
+        cbar = plt.colorbar(img, format=ticker.FuncFormatter(fmt))
         cbar.set_label(r'$\log_{10}(g)$')
+        pos = cbar.ax.get_position()
+        cbar.ax.set_position([pos.x0, pos.y0, pos.width, pos.height * 0.9])
         #plt.title("Interpolated Data (log scale)")
         plt.xlabel("Normalized X")
         plt.ylabel("Normalized Y")
