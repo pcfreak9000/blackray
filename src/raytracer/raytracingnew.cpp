@@ -26,37 +26,12 @@ Real checkIntersect(long double x1, long double y1, long double x2,
   return NO_INTERSECT;
 }
 
-//finds any intersection. it is not guranteed that it is the closest one, i.e. the first hit. Sufficiently small stepsize should circumvent the problem,
-//as well as retaking the step with a smaller stepsize.
-int get_interpolated_sp(const long double x1, const long double y1,
-    const long double x2, const long double y2, SurfacePoint **diskdata,
-    const size_t ddsize, SurfacePoint &out, bool mirrory) {
-  for (size_t i = 0; i < ddsize - 1; i++) {
-    SurfacePoint& p0 = *diskdata[i];
-    SurfacePoint& p1 = *diskdata[i + 1];
-    long double mul = mirrory ? -1 : 1;
-    long double pt = checkIntersect(p0.x, mul * p0.y, p1.x,
-        mul * p1.y, x1, y1, x2, y2);
-    if (pt != NO_INTERSECT) {
-      long double xi = p0.x + pt * (p1.x - p0.x);
-      long double yi = mul * (p0.y + pt * (p1.y - p0.y));
-      out.x = xi;
-      out.y = yi;
-      out.density = interpolate(p0.density, p1.density, pt);
-//      if(out.density == 0.0){
-//        return NO_INTERSECT;
-//      }
-      //should be zero if either p is zero because linear interpolation of these velocities at that place is probably not physically
-      out.u0 = interpolate(p0.u0, p1.u0, pt);
-      out.u1 = interpolate(p0.u1, p1.u1, pt);
-      out.u2 = interpolate(p0.u2, p1.u2, pt);
-      out.u3 = interpolate(p0.u3, p1.u3, pt);
-      return INTERSECT;
-    }
-  }
-  return NO_INTERSECT;
-}
 
+//finds any intersection. it is not guranteed (but very likely) that it is the closest one, i.e. the first hit. Sufficiently small stepsize should circuvent the problem,
+//as well as retaking the step with a smaller stepsize.
+//this might interpolate between a mesh cell right beyond the horizon, which might contain invalid data, and the first cell outside the horizon,
+//for disk shapes which come very close to the horizon
+//at the moment, this does not seem to be a problem, but keep this in mind, especially if and when doing a clean rewrite of this
 int get_interpolated_sp(const long double x1, const long double y1,
     const long double x2, const long double y2, QuadTree* quadtree, SurfacePoint &out, int& index) {
   SurfaceElement* elem;
