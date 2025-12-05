@@ -30,6 +30,10 @@ Real QuadTree::check_intersect(Real x1, Real y1, Real x2, Real y2, SurfaceElemen
   }
   for(int i=0; i<myelements.size(); i++) {
         SurfaceElement* elem = myelements[i];
+        if (elem->sp0->y==0.0 && elem->sp1->y==0.0){
+          //if this raytracer is generalized, this does not really belong here. But we ignore segments with y:=0 of the accretion disk.
+          continue;
+        }
         Real res = checkIntersect(elem->sp0->x,elem->sp0->y,elem->sp1->x,elem->sp1->y,x1,y1,x2,y2);
         if(res != NO_INTERSECT) {
           *out = elem;
@@ -248,8 +252,8 @@ int main(int argc, char *argv[]) {
 
   spin2 = spin * spin;
 
-  Real maxr_xdir = sqrt(SQR(maxx+1.0)-spin2)+1.0;
-  Real maxr_ydir = sqrt(SQR(maxy+1.0))+1.0;
+  Real maxr_xdir = sqrt(SQR(maxx+10.0)-spin2)+10.0;
+  Real maxr_ydir = sqrt(SQR(maxy+10.0))+10.0;
   Real checkr = maxr_ydir;
   if(maxr_xdir > maxr_ydir) checkr = maxr_xdir;
 

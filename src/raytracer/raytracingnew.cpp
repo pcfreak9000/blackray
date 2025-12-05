@@ -43,9 +43,6 @@ int get_interpolated_sp(const long double x1, const long double y1,
     out.x = xi;
     out.y = yi;
     out.density = interpolate(elem->sp0->density, elem->sp1->density, result);
-    //      if(out.density == 0.0){
-    //        return NO_INTERSECT;
-    //      }
     //should be zero if either p is zero because linear interpolation of these velocities at that place is probably not physically
     out.u0 = interpolate(elem->sp0->u0, elem->sp1->u0, result);
     out.u1 = interpolate(elem->sp0->u1, elem->sp1->u1, result);
@@ -475,12 +472,31 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     redshift(xem[1],const1,gfactorforcosem);
     /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
     cosem = carter * gfactorforcosem / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
+    //Workaround for redshift function giving nan...
+    if(std::isnan(cosem) && xem[1] < 6.0) {
+      cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
+      if(cosem > 1.05){
+        stop_integration = 6;
+        xem[1] = r;
+        gfactor = 1.0;
+        cosem = 0.0;
+      } else if(cosem > 1.0) {
+        cosem = 1.0;
+      }
+    }
   } else {
     xem[1] = r;
     gfactor = 1.0;
     cosem = 0.0;
   }
 #ifdef DEBUG_COSEM
+  if(std::isnan(cosem)) {
+    std::cout << "Cosem is nan, ignoring ray" << std::endl;
+    stop_integration = 6;
+    xem[1] = r;
+    gfactor = 1.0;
+    cosem = 0.0;
+  }
   if(cosem > 1.05) {
     std::cout << "Cosem > 1.05 detected, ignoring ray: " << cosem << std::endl;
     stop_integration = 6;
