@@ -7,7 +7,7 @@ XILLVER=$HOME/xillver-a-Ec5.fits
 
 incls=( "5" "50" )
 alphas=( "-3" "-6" )
-accrates=( "0.01" "0.02" "0.1" )
+accrates=( "0.05" "0.1" )
 if [ "$BINAC2" ]; then
     workdirbase="$WORK"/"$myname"
 else
