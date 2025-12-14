@@ -4,30 +4,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 import matplotlib.colors as mcolors
-from matplotlib.ticker import LogLocator
 from sys import argv
+from multiprocessing import Pool
 
 def normalize_column(col):
     return (col - np.min(col)) / (np.max(col) - np.min(col))
 
-def main(input_file, output_image, size=1024, use_labels=False):
-    # Load the data
-    data = np.loadtxt(input_file, delimiter=None)
+def gengrid(args):
+    return griddata(args[0], args[1], args[2], args[3], args[4])
 
-    if data.shape[1] < 4:
-        raise ValueError("Input file must have at least four columns: x y data label")
-
-    x_raw, y_raw, d_raw, label_raw = data[:, 0], data[:, 1], data[:, 2], data[:, 3].astype(int)
-
-    # Normalize x and y
-    x_norm = normalize_column(x_raw)
-    y_norm = normalize_column(y_raw)
-
-    # Create grid
-    grid_x, grid_y = np.meshgrid(
-        np.linspace(0, 1, size),
-        np.linspace(0, 1, size)
-    )
+def main(preptuple):
+    data = preptuple[0]
+    x_raw = preptuple[1]
+    y_raw = preptuple[2]
+    d_raw = preptuple[3]
+    label_raw = preptuple[4]
+    x_norm = preptuple[5]
+    y_norm = preptuple[6]
+    grid_x = preptuple[7]
+    grid_y = preptuple[8]
+    output_image = preptuple[9]
+    use_labels = preptuple[10]
 
     if use_labels:
         # Define a color map as a dictionary of RGB tuples (values in range 0–1)
@@ -45,17 +42,22 @@ def main(input_file, output_image, size=1024, use_labels=False):
         }
         interpolmeth='linear'
         # Prepare RGB channels
-        grid_r = griddata((x_norm, 1.0-y_norm), [label_colors[l][0] for l in label_raw], (grid_x, grid_y), method=interpolmeth, fill_value=0)
-        grid_g = griddata((x_norm, 1.0-y_norm), [label_colors[l][1] for l in label_raw], (grid_x, grid_y), method=interpolmeth, fill_value=0)
-        grid_b = griddata((x_norm, 1.0-y_norm), [label_colors[l][2] for l in label_raw], (grid_x, grid_y), method=interpolmeth, fill_value=0)
-
+        #grid_r = gengrid(((x_norm, 1.0-y_norm), [label_colors[l][0] for l in label_raw], (grid_x, grid_y), interpolmeth, 0.0))
+        #grid_g = gengrid(((x_norm, 1.0-y_norm), [label_colors[l][1] for l in label_raw], (grid_x, grid_y), interpolmeth, 0.0))
+        #grid_b = gengrid(((x_norm, 1.0-y_norm), [label_colors[l][2] for l in label_raw], (grid_x, grid_y), interpolmeth, 0.0))
+        lbs = []
+        for i in range(3):
+            lbs.append(((x_norm, 1.0-y_norm), [label_colors[l][i] for l in label_raw], (grid_x, grid_y), interpolmeth, 0.0))
+        with Pool(3) as p:
+            grid_r, grid_g, grid_b = p.map(gengrid, lbs)
+        
         # Stack to RGB image
         rgb_image = np.stack([grid_r, grid_g, grid_b], axis=2)
         rgb_image_cl = np.clip(rgb_image, min=0.0, max=1.0)
         plt.imsave(output_image, rgb_image_cl)
 
     else:
-        grid_d = griddata((x_norm, y_norm), np.log10(d_raw), (grid_x, grid_y), method='nearest', fill_value=0.0)
+        grid_d = gengrid(((x_norm, y_norm), np.log10(d_raw), (grid_x, grid_y), 'nearest', 0.0))
 
         #absmax = np.nanmax(np.abs(grid_d))
         #norm = mcolors.TwoSlopeNorm(vmin=-absmax, vcenter=0.0, vmax=absmax)
@@ -87,7 +89,28 @@ if __name__ == "__main__":
     outtxt = argv[1]
     outg = argv[2]
     outi = argv[3]
+    
+    size=2048
+    
     # Set `use_labels` to True to enable color labeling
-    main(outtxt, outg, size=2048, use_labels=False)
-    main(outtxt, outi, size=2048, use_labels=True)
+    # Load the data
+    data = np.loadtxt(outtxt, delimiter=None)
+
+    if data.shape[1] < 4:
+        raise ValueError("Input file must have at least four columns: x y data label")
+
+    x_raw, y_raw, d_raw, label_raw = data[:, 0], data[:, 1], data[:, 2], data[:, 3].astype(int)
+
+    # Normalize x and y
+    x_norm = normalize_column(x_raw)
+    y_norm = normalize_column(y_raw)
+
+    # Create grid
+    grid_x, grid_y = np.meshgrid(
+        np.linspace(0, 1, size),
+        np.linspace(0, 1, size)
+    )
+    
+    main((data, x_raw, y_raw, d_raw, label_raw, x_norm, y_norm, grid_x, grid_y, outg, False))
+    main((data, x_raw, y_raw, d_raw, label_raw, x_norm, y_norm, grid_x, grid_y, outi, True))
 

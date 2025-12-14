@@ -49,7 +49,12 @@ def main(**kwargs):
     if dddd != 0:
         print(dddd)
     print("End of ray-tracing part")
-
+    
+    print("Starting debug image processes...")
+    img_command = "python img.py %s %s %s &"%(outtxt,outgtxt,outitxt)
+    os.system(img_command)
+    
+    print("Fetching xillver spectrum")
     xillver_command = "python get_xillver_spectrum.py %f %f %f %f %f %s %s"%(gamma, afe, logxi, ecut, incl, path_to_xillver_file,tempdir)
     os.system(xillver_command)
 
@@ -64,8 +69,7 @@ def main(**kwargs):
     if aaaa != 0:
         print(aaaa)
     print("End of convolution! The resulting spectrum is in output/")
-    img_command = "python img.py %s %s %s"%(outtxt,outgtxt,outitxt)
-    os.system(img_command)
+    
 
 # Execute main function
 if __name__ == '__main__':
