@@ -8,6 +8,9 @@ XILLVER=$HOME/xillver-a-Ec5.fits
 incls=( "5" "50" )
 alphas=( "-3" "-6" )
 accrates=( "0.05" "0.1" )
+#incls=( "5" )
+#alphas=( "-3" )
+#accrates=( "0.1" )
 if [ "$BINAC2" ]; then
     workdirbase="$WORK"/"$myname"
 else
@@ -35,8 +38,8 @@ for incl in "${incls[@]}"; do
       export DISKLOC="$workdirbase"/"dshape$accrate.csv"
       mkdir -p "$WORKDIR"
       if [ "$BINAC2" ]; then
-        export OMP_NUM_THREADS=64
-        sbatch --partition compute -t 8:00:00 -N 1 --ntasks-per-node=$OMP_NUM_THREADS --cpus-per-task 2 --mem-per-cpu=8gb -J br_"$myname"_"$incl"_"$alpha"_"$accrate" --output="$WORKDIR"/LOG_BR --error="$WORKDIR"/LOG_BR --export=ALL startjobbr.sh
+        export OMP_NUM_THREADS=32
+        sbatch --partition compute -t 06:00:00 -N 1 --ntasks-per-node=$OMP_NUM_THREADS --cpus-per-task 2 --mem=250gb -J br_"$myname"_"$incl"_"$alpha"_"$accrate" --output="$WORKDIR"/LOG_BR --error="$WORKDIR"/LOG_BR --export=ALL startjobbr.sh
       else
         if [ "$P9000_WORKER_THREADS" ]; then
           echo "Using $P9000_WORKER_THREADS threads"
