@@ -366,9 +366,10 @@ int main(int argc, char *argv[]) {
 
         gfactor = hit.gfactor;
         pp = gfactor * E_line;
-        tmpOutFile << xobs << " " << yobs << " " << gfactor << " "
-            << stop_integration_condition << " " << hit.hc << std::endl;
-
+        if(!RESTRICT_DEBUGFILE_CRIT){
+          tmpOutFile << xobs << " " << yobs << " " << gfactor << " "
+              << stop_integration_condition << " " << hit.hc << std::endl;
+        }
         /* --- integration - part 1 --- */
 
         for (i = 0; i <= imax - 2; i++) {
@@ -380,8 +381,10 @@ int main(int argc, char *argv[]) {
           }
         }
       } else {
+        if(RESTRICT_DEBUGFILE_CRIT && ( stop_integration_condition==255 || stop_integration_condition==6 )){
         tmpOutFile << xobs << " " << yobs << " " << 1.0 << " "
             << stop_integration_condition << " " << hit.hc << std::endl;
+        }
       }
       }
     }

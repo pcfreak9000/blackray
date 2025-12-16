@@ -100,6 +100,10 @@ if __name__ == "__main__":
         raise ValueError("Input file must have at least four columns: x y data label")
 
     x_raw, y_raw, d_raw, label_raw = data[:, 0], data[:, 1], data[:, 2], data[:, 3].astype(int)
+    
+    if len(x_raw < 4):
+        print("img.py: not enough data for interpolation, aborting")
+        exit()
 
     # Normalize x and y
     x_norm = normalize_column(x_raw)
