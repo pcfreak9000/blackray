@@ -366,7 +366,7 @@ int main(int argc, char *argv[]) {
 
         gfactor = hit.gfactor;
         pp = gfactor * E_line;
-        if(!RESTRICT_DEBUGFILE_CRIT){
+        if(!RESTRICT_DEBUGFILE_CRIT && raycount % DEBUGFILE_OUT_DIV == 0){
           tmpOutFile << xobs << " " << yobs << " " << gfactor << " "
               << stop_integration_condition << " " << hit.hc << std::endl;
         }
@@ -381,7 +381,7 @@ int main(int argc, char *argv[]) {
           }
         }
       } else {
-        if(RESTRICT_DEBUGFILE_CRIT && ( stop_integration_condition==255 || stop_integration_condition==6 )){
+        if((!RESTRICT_DEBUGFILE_CRIT && raycount % DEBUGFILE_OUT_DIV == 0) || ( stop_integration_condition==255 || stop_integration_condition==6 )){
         tmpOutFile << xobs << " " << yobs << " " << 1.0 << " "
             << stop_integration_condition << " " << hit.hc << std::endl;
         }

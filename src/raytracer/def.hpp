@@ -63,6 +63,7 @@ using Real = long double;
 //Warn about and fix cosem>1.0.
 //#define DEBUG_COSEM
 #define RESTRICT_DEBUGFILE_CRIT 1
+#define DEBUGFILE_OUT_DIV 1
 
 class QuadTree {
 public:

@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     x_raw, y_raw, d_raw, label_raw = data[:, 0], data[:, 1], data[:, 2], data[:, 3].astype(int)
     
-    if len(x_raw < 4):
+    if len(x_raw)<4:
         print("img.py: not enough data for interpolation, aborting")
         exit()
 
