@@ -53,7 +53,7 @@ using Real = long double;
 
 #define DEBUG_DIV 1.0
 #define RING_DIV 15
-#define MAX_ITER 6000
+#define MAX_ITER 10000
 //Warn about approach to max iterations:
 //#define ITER_WARN
 //Warn about strongly deviating 4-velocity norms from the disk at emission points:
@@ -61,7 +61,7 @@ using Real = long double;
 //Warn about strongly deviating 4-momentum norms of photons at emission points:
 //#define DEBUG_FMOM_NORM
 //Warn about and fix cosem>1.0.
-//#define DEBUG_COSEM
+#define DEBUG_COSEM
 #define RESTRICT_DEBUGFILE_CRIT 1
 #define DEBUGFILE_OUT_DIV 1
 

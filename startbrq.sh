@@ -5,7 +5,7 @@ minrange="$2"
 maxrange="$3"
 XILLVER=$HOME/xillver-a-Ec5.fits
 
-incls=( "5" "50" )
+incls=( "15" "50" )
 alphas=( "-3" "-6" )
 accrates=( "0.05" "0.1" )
 #incls=( "5" )
