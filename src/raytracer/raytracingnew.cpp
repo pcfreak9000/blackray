@@ -432,56 +432,67 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     Real norm;
     scalarProduct(met, uarray, uarray, norm);
     correct4VelNorm(met, norm, uarray);
+    Real newnorm;
+    scalarProduct(met, uarray, uarray, newnorm);
 #ifdef DEBUG_FVEL_NORM
     if(norm > -0.97 || norm < -1.03) {
-      Real newnorm;
-      scalarProduct(met, uarray, uarray, newnorm);
-      std::cout << "4-Vel norm deviates significantly" << std::endl;
+      std::cout << "4-Vel norm deviates significantly, ignoring ray" << std::endl;
       std::cout << "Old norm: " << norm << std::endl;
       std::cout << "Fixed norm: " << newnorm << std::endl;
       std::cout << "Delta components: " << spi.u0-uarray[0] << " " << spi.u1-uarray[1] << " " << spi.u2-uarray[2] << " " << spi.u3-uarray[3] << " " << std::endl;
       stop_integration = 6;
     }
 #endif
-    
-    Real g_tt, g_pp, g_tp;
-    g_tt = met[0][0];
-    g_pp = met[3][3];
-    g_tp = met[0][3];
-    Real denom = (g_tt * g_pp - g_tp * g_tp);
-    Real ktcalc = -(g_pp + b * g_tp) / denom;
-    Real kphicalc = (g_tp + b * g_tt) / denom;
-    Real karray[4] = {ktcalc, kr, kth, kphicalc};
-
-#ifdef DEBUG_FMOM_NORM
-    Real knorm;
-    scalarProduct(met, karray, karray, knorm);
-    if(knorm > 0.03 || knorm < -0.03) {
-      std::cout << "4-Momentum norm deviates significantly" << std::endl;
-      std::cout << "Norm: " << knorm << std::endl;
+    //if we can't fix this mess, invalidate ray
+    if(newnorm > -0.95 || newnorm < -1.05) {
+      std::cout << "even fixed 4-vel norm deviates significantly, ignoring ray" << std::endl;
       stop_integration = 6;
-    }
-#endif
-    
-    Real emenergy;
-    scalarProduct(met, uarray, karray, emenergy);
-    gfactor = obsenergy/emenergy;
+      cosem = 0.0;
+      gfactor = 1.0;
+      xem[1] = r;
+    }else{
 
-    //cosem stays artifical
-    Real gfactorforcosem;
-    redshift(xem[1],const1,gfactorforcosem);
-    /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
-    cosem = carter * gfactorforcosem / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
-    //Workaround for redshift function giving nan...
-    if(std::isnan(cosem) && xem[1] < 6.0) {
-      cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
-      if(cosem > 1.05){
+
+      Real g_tt, g_pp, g_tp;
+      g_tt = met[0][0];
+      g_pp = met[3][3];
+      g_tp = met[0][3];
+      Real denom = (g_tt * g_pp - g_tp * g_tp);
+      Real ktcalc = -(g_pp + b * g_tp) / denom;
+      Real kphicalc = (g_tp + b * g_tt) / denom;
+      Real karray[4] = {ktcalc, kr, kth, kphicalc};
+
+  #ifdef DEBUG_FMOM_NORM
+      Real knorm;
+      scalarProduct(met, karray, karray, knorm);
+      if(knorm > 0.03 || knorm < -0.03) {
+        std::cout << "4-Momentum norm deviates significantly" << std::endl;
+        std::cout << "Norm: " << knorm << std::endl;
         stop_integration = 6;
-        xem[1] = r;
-        gfactor = 1.0;
-        cosem = 0.0;
-      } else if(cosem > 1.0) {
-        cosem = 1.0;
+      }
+  #endif
+
+      Real emenergy;
+      scalarProduct(met, uarray, karray, emenergy);
+      gfactor = obsenergy/emenergy;
+
+      //cosem stays artifical
+      Real gfactorforcosem;
+      redshift(xem[1],const1,gfactorforcosem);
+      /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
+      cosem = carter * gfactorforcosem / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
+      //Workaround for redshift function giving nan...
+      if(std::isnan(cosem) && xem[1] < 6.0) {
+        cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
+        if(cosem > 1.05){
+          std::cout << "Cosem was nan, then fixed cosem was > 1.05, ignoring ray: " << cosem << std::endl;
+          stop_integration = 6;
+          xem[1] = r;
+          gfactor = 1.0;
+          cosem = 0.0;
+        } else if(cosem > 1.0) {
+          cosem = 1.0;
+        }
       }
     }
   } else {
