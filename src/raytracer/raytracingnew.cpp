@@ -482,7 +482,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
       /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
       cosem = carter * gfactorforcosem / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
       //Workaround for redshift function giving nan...
-      if(std::isnan(cosem) && xem[1] < 6.0) {
+      if(std::isnan(cosem)) {
         cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
         if(cosem > 1.05){
           std::cout << "Cosem was nan, then fixed cosem was > 1.05, ignoring ray: " << cosem << std::endl;
@@ -496,6 +496,13 @@ void raytrace(long double xobs, long double yobs, long double iobs,
       }
     }
   } else {
+    xem[1] = r;
+    gfactor = 1.0;
+    cosem = 0.0;
+  }
+  if(gfactor < 0.0){
+    std::cout << "gfactor is < 0.0, ignoring ray" << std::endl;
+    stop_integration = 6;
     xem[1] = r;
     gfactor = 1.0;
     cosem = 0.0;
