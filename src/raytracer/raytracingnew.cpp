@@ -65,9 +65,18 @@ void scalarProduct(Real met[4][4], Real* fvec0, Real* fvec1, Real& scal) {
 }
 
 void correct4VelNorm(Real met[4][4], Real norm, Real* fvel) {
-  Real dif = norm+1;
-  Real deltaut = dif/met[0][0];
-  fvel[0] = sqrt(fvel[0]*fvel[0]-deltaut);
+  Real g_tt = met[0][0];
+  Real g_tp = met[0][3];
+  Real udt = fvel[0];
+  Real up = fvel[3];
+  Real Fp1 = norm+1;
+  
+  Real radi = SQR(g_tt*udt)+2.0*g_tt*udt*g_tp*up-g_tt*Fp1+SQR(g_tp*up);
+  fvel[0] = -(sqrt(radi)+g_tp*up)/g_tt;
+  
+  //Real dif = norm+1;
+  //Real deltaut = dif/met[0][0];
+  //fvel[0] = sqrt(fvel[0]*fvel[0]-deltaut);
 }
 
 void raytrace(long double xobs, long double yobs, long double iobs,
