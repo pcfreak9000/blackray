@@ -1,30 +1,19 @@
+#include "raytracingnew.hpp"
 
-long double interpolate(long double a, long double b, long double f) {
+#include <iostream>
+#include <cmath>
+
+#include "quadtree.hpp"
+#include "def.hpp"
+#include "diffeqs.hpp"
+#include "redshift.hpp"
+#include "metric.hpp"
+
+Real interpolate(Real a, Real b, Real f) {
   return (1.0 - f) * a + f * b;
 }
 
-Real checkIntersect(long double x1, long double y1, long double x2,
-    long double y2, long double x3, long double y3, long double x4,
-    long double y4) {
-  long double axl = std::min(x1, x2);
-  long double axh = std::max(x1, x2);
-  long double ayl = std::min(y1, y2);
-  long double ayh = std::max(y1, y2);
-  long double bxl = std::min(x3, x4);
-  long double bxh = std::max(x3, x4);
-  long double byl = std::min(y3, y4);
-  long double byh = std::max(y3, y4);
-  if (!(axl < bxh && axh > bxl && ayl < byh && ayh > byl)) {
-    return NO_INTERSECT;
-  }
-  long double num = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
-  long double denum = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-  long double t = num / denum;
-  if (t >= 0 && t <= 1) {
-    return t;
-  }
-  return NO_INTERSECT;
-}
+
 
 
 //finds any intersection. it is not guranteed (but very likely) that it is the closest one, i.e. the first hit. Sufficiently small stepsize should circuvent the problem,
@@ -32,14 +21,14 @@ Real checkIntersect(long double x1, long double y1, long double x2,
 //this might interpolate between a mesh cell right beyond the horizon, which might contain invalid data, and the first cell outside the horizon,
 //for disk shapes which come very close to the horizon
 //at the moment, this does not seem to be a problem, but keep this in mind, especially if and when doing a clean rewrite of this
-int get_interpolated_sp(const long double x1, const long double y1,
-    const long double x2, const long double y2, QuadTree* quadtree, SurfacePoint &out, int& index) {
+int get_interpolated_sp(const Real x1, const Real y1,
+    const Real x2, const Real y2, QuadTree* quadtree, SurfacePoint &out, int& index) {
   SurfaceElement* elem;
   Real result = quadtree->check_intersect(x1,y1,x2,y2,&elem);
   if(result != NO_INTERSECT) {
     index = elem->index;
-    long double xi = (elem->sp0->x) + result * ((elem->sp1->x) - (elem->sp0->x));
-    long double yi = (elem->sp0->y) + result * ((elem->sp1->y) - (elem->sp0->y));
+    Real xi = (elem->sp0->x) + result * ((elem->sp1->x) - (elem->sp0->x));
+    Real yi = (elem->sp0->y) + result * ((elem->sp1->y) - (elem->sp0->y));
     out.x = xi;
     out.y = yi;
     out.density = interpolate(elem->sp0->density, elem->sp1->density, result);
@@ -79,36 +68,36 @@ void correct4VelNorm(Real met[4][4], Real norm, Real* fvel) {
   //fvel[0] = sqrt(fvel[0]*fvel[0]-deltaut);
 }
 
-void raytrace(long double xobs, long double yobs, long double iobs,
-    long double rin, long double disk_length_combined, RayHit &hit,
+void raytrace(Real xobs, Real yobs, Real iobs,
+    Real rin, Real disk_length_combined, RayHit &hit,
     int &stop_integration, SurfacePoint **diskdata, const size_t ddsize, QuadTree* tree, Real checkr) {
-  long double dobs;
-  long double xobs2, yobs2;
-  long double atol, rtol;
-  long double hstart;
-  long double t0, r0, th0, phi0;
-  long double kt0, kr0, kth0, kphi0;
-  long double r02, s0, s02;
-  long double fact1, fact2, fact3;
-  long double t, r, th, phi;
-  long double kt, kr, kth, kphi;
-  long double rau, thau, phiau, krau, kthau;
-  long double kyem;
-  long double const0, const1;
-  long double v1, v2;
-  long double h, hnext;
-  long double Delta;
-  long double spin2 = spin * spin;
+  Real dobs;
+  Real xobs2, yobs2;
+  Real atol, rtol;
+  Real hstart;
+  Real t0, r0, th0, phi0;
+  Real kt0, kr0, kth0, kphi0;
+  Real r02, s0, s02;
+  Real fact1, fact2, fact3;
+  Real t, r, th, phi;
+  Real kt, kr, kth, kphi;
+  Real rau, thau, phiau, krau, kthau;
+  Real kyem;
+  Real const0, const1;
+  Real v1, v2;
+  Real h, hnext;
+  Real Delta;
+  Real spin2 = spin * spin;
 
-  long double carter, cosem, c02;
-  long double b;
+  Real carter, cosem, c02;
+  Real b;
 
-  long double met[4][4];
-  long double diffs[5], vars[5], vars_temp[5], vars_4th[5], vars_5th[5], k1[5],
+  Real met[4][4];
+  Real diffs[5], vars[5], vars_temp[5], vars_4th[5], vars_5th[5], k1[5],
       k2[5], k3[5], k4[5], k5[5], k6[5];
-  long double xem[4];
-  long double gfactor;
-  long double err, errmin, errmax;
+  Real xem[4];
+  Real gfactor;
+  Real err, errmin, errmax;
 
   int check, check2 = 0;
   int i;
@@ -122,7 +111,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   atol = 1.0e-10;
   //rtol = 1.0e-10;
   rtol = 1.0e3;
-  long double thtol = 1.0e-8;
+  Real thtol = 1.0e-8;
   int count, iter;
 
   hstart = -1.0;
@@ -193,34 +182,34 @@ void raytrace(long double xobs, long double yobs, long double iobs,
   count = 0;
   iter = 0;
 
-  long double a1 = 1.0 / 4.0;
-  long double b1 = 3.0 / 32.0;
-  long double b2 = 9.0 / 32.0;
-  long double c1 = 1932.0 / 2197.0;
-  long double c2 = -7200.0 / 2197.0;
-  long double c3 = 7296.0 / 2197.0;
-  long double d1 = 439.0 / 216.0;
-  long double d2 = -8.0;
-  long double d3 = 3680.0 / 513.0;
-  long double d4 = -845.0 / 4104.0;
-  long double e1 = -8.0 / 27.0;
-  long double e2 = 2.0;
-  long double e3 = -3544.0 / 2565.0;
-  long double e4 = 1859.0 / 4104.0;
-  long double e5 = -11.0 / 40.0;
-  long double f1 = 25.0 / 216.0;
-  long double f2 = 0.0;
-  long double f3 = 1408.0 / 2565.0;
-  long double f4 = 2197.0 / 4104.0;
-  long double f5 = -1.0 / 5.0;
-  long double g1 = 16.0 / 135.0;
-  long double g2 = 0.0;
-  long double g3 = 6656.0 / 12825.0;
-  long double g4 = 28561.0 / 56430.0;
-  long double g5 = -9.0 / 50.0;
-  long double g6 = 2.0 / 55.0;
+  Real a1 = 1.0 / 4.0;
+  Real b1 = 3.0 / 32.0;
+  Real b2 = 9.0 / 32.0;
+  Real c1 = 1932.0 / 2197.0;
+  Real c2 = -7200.0 / 2197.0;
+  Real c3 = 7296.0 / 2197.0;
+  Real d1 = 439.0 / 216.0;
+  Real d2 = -8.0;
+  Real d3 = 3680.0 / 513.0;
+  Real d4 = -845.0 / 4104.0;
+  Real e1 = -8.0 / 27.0;
+  Real e2 = 2.0;
+  Real e3 = -3544.0 / 2565.0;
+  Real e4 = 1859.0 / 4104.0;
+  Real e5 = -11.0 / 40.0;
+  Real f1 = 25.0 / 216.0;
+  Real f2 = 0.0;
+  Real f3 = 1408.0 / 2565.0;
+  Real f4 = 2197.0 / 4104.0;
+  Real f5 = -1.0 / 5.0;
+  Real g1 = 16.0 / 135.0;
+  Real g2 = 0.0;
+  Real g3 = 6656.0 / 12825.0;
+  Real g4 = 28561.0 / 56430.0;
+  Real g5 = -9.0 / 50.0;
+  Real g6 = 2.0 / 55.0;
   SurfacePoint spi;
-  long double prevh = -1.0;
+  Real prevh = -1.0;
 
 
 
@@ -291,7 +280,7 @@ void raytrace(long double xobs, long double yobs, long double iobs,
         vars_5th[i] = vars[i] + g1 * k1[i] + g2 * k2[i] + g3 * k3[i]
             + g4 * k4[i] + g5 * k5[i] + g6 * k6[i];
 
-        err = fabs((vars_4th[i] - vars_5th[i]) / max(vars_4th[i], vars[i]));
+        err = fabs((vars_4th[i] - vars_5th[i]) / std::max(vars_4th[i], vars[i]));
 
         if (err > errmax && check2 == 0)
           check = 1;
@@ -366,10 +355,10 @@ void raytrace(long double xobs, long double yobs, long double iobs,
 
     //check if the new position intersects the accretion disk
     //convert coordinates of current and previous position via a BL-cartesian conversion
-    long double xcoord = std::sqrt(r * r + spin2) * sin(th);
-    long double ycoord = r * cos(th);
-    long double xcoordprev = std::sqrt(rau * rau + spin2) * sin(thau);
-    long double ycoordprev = rau * cos(thau);
+    Real xcoord = std::sqrt(r * r + spin2) * sin(th);
+    Real ycoord = r * cos(th);
+    Real xcoordprev = std::sqrt(rau * rau + spin2) * sin(thau);
+    Real ycoordprev = rau * cos(thau);
     int res = NO_INTERSECT;
     int index = 0;
 
@@ -431,8 +420,8 @@ void raytrace(long double xobs, long double yobs, long double iobs,
     //Real x = std::sqrt(r);
     //Real p_ut = (0.0 + CUBE(x))/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
     //Real p_uph = 1/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
-    //long double uarray[4] = {p_ut,0.0,0.0,p_uph};
-    //long double uarray[4] = {1,0,0,0};
+    //Real uarray[4] = {p_ut,0.0,0.0,p_uph};
+    //Real uarray[4] = {1,0,0,0};
     Real uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
     //to fix any inconsistencies introduced by linear interpolation or the change of coordinate chart (KS->BL)
     //or code differences between Athena++ and Blackray or simply numerical issues in the entire pipeline

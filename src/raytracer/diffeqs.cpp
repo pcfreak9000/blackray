@@ -1,15 +1,18 @@
-void diffeqs(long double b, long double vars[], long double diffs[]) {
-  long double r, th;
-  long double kt, kphi;
-  long double kt2, kr2, kth2, kp2, ktp, krth;
-  long double ch_rtt, ch_rtp, ch_rrr, ch_rrth, ch_rthth, ch_rpp;
-  long double ch_thtt, ch_thtp, ch_thrr, ch_thrth, ch_ththth, ch_thpp;
-  long double g_tt, g_tp, g_pp, gurr, guthth;
-  long double dgttdr, dgttdth, dgtpdr, dgtpdth, dgrrdr, dgrrdth, dgththdr,
+#include "diffeqs.hpp"
+#include <cmath>
+
+void diffeqs(Real b, Real vars[], Real diffs[]) {
+  Real r, th;
+  Real kt, kphi;
+  Real kt2, kr2, kth2, kp2, ktp, krth;
+  Real ch_rtt, ch_rtp, ch_rrr, ch_rrth, ch_rthth, ch_rpp;
+  Real ch_thtt, ch_thtp, ch_thrr, ch_thrth, ch_ththth, ch_thpp;
+  Real g_tt, g_tp, g_pp, gurr, guthth;
+  Real dgttdr, dgttdth, dgtpdr, dgtpdth, dgrrdr, dgrrdth, dgththdr,
       dgththdth, dgppdr, dgppdth;
-  long double hgurr, hguthth;
-  long double denom;
-  long double t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
+  Real hgurr, hguthth;
+  Real denom;
+  Real t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
       t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30,
       t31, t32, t33, t34, t35, t36, t37, t38, t39, t40, t41, t42, t43, t44, t45,
       t46, t47, t48;

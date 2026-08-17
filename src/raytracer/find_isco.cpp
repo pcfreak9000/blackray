@@ -1,16 +1,23 @@
-void find_isco(long double z1, long double& isco)
+#include "find_isco.hpp"
+
+#include <cmath>
+#include <stdio.h>
+
+#include "metric.hpp"
+
+void find_isco(Real z1, Real& isco)
 {
     
     int i, j, casenum=1, stop=0, count=0;
-    long double detol = 1.0e-8;
-    long double rll,rul,rinit=z1,rnew,rold,rstep=1.e-5;
-    long double mn[4][4],dmn[4][4];
-    long double mnp[4][4],mnm[4][4],dmnp[4][4],dmnm[4][4];
-    long double ep,em,eold,enew,omp,omm,omold,omnew;
-    long double epsq,emsq;
-    long double deold,denew;
-    long double dr=1.0e-5;
-    long double sqspin=spin*spin;
+    Real detol = 1.0e-8;
+    Real rll,rul,rinit=z1,rnew,rold,rstep=1.e-5;
+    Real mn[4][4],dmn[4][4];
+    Real mnp[4][4],mnm[4][4],dmnp[4][4],dmnm[4][4];
+    Real ep,em,eold,enew,omp,omm,omold,omnew;
+    Real epsq,emsq;
+    Real deold,denew;
+    Real dr=1.0e-5;
+    Real sqspin=spin*spin;
     
     if(spin>0.)
         rll = 1.+sqrt(1.-sqspin);

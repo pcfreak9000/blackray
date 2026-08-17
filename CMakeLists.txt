@@ -9,7 +9,7 @@ set (src_dir_conv "${PROJECT_SOURCE_DIR}/src/convolver/")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/")
 
 file (GLOB source_files_conv "${src_dir_conv}/convolver.cpp")
-file (GLOB source_files_rt "${src_dir_rt}/main.cpp")
+file (GLOB source_files_rt "${src_dir_rt}/*.cpp")
 
 add_executable (rt ${source_files_rt})
 add_executable (conv ${source_files_conv})

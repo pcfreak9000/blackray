@@ -7,8 +7,6 @@
 #include <cstring>
 #include <iostream>
 
-using namespace std;
-
 #define N_ENER_CONV \
   5000  // number of bins for the convolution, not that it needs to follow 2^N
         // because of the FFT

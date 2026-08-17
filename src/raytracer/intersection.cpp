@@ -1,10 +1,14 @@
-void intersection(long double x_1, long double y_1, long double z_1,
-                  long double x_2, long double y_2, long double z_2,
-                  long double x_d[]) {
-  long double r1, h1, r2, h2;
-  long double pp;
-  long double r3, r4, c1;
-  long double xmax, xmin;
+#include "intersection.hpp"
+
+#include <cmath>
+
+void intersection(Real x_1, Real y_1, Real z_1,
+                  Real x_2, Real y_2, Real z_2,
+                  Real x_d[]) {
+  Real r1, h1, r2, h2;
+  Real pp;
+  Real r3, r4, c1;
+  Real xmax, xmin;
 
   r1 = x_1 * sin(y_1);
   h1 = x_1 * cos(y_1);
