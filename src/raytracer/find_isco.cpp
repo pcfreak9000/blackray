@@ -8,17 +8,16 @@
 void find_isco(Real z1, Real& isco)
 {
     
-    int i, j, casenum=1, stop=0, count=0;
+    int stop=0, count=0;
     Real detol = 1.0e-8;
     Real rll,rul,rinit=z1,rnew,rold,rstep=1.e-5;
-    Real mn[4][4],dmn[4][4];
     Real mnp[4][4],mnm[4][4],dmnp[4][4],dmnm[4][4];
-    Real ep,em,eold,enew,omp,omm,omold,omnew;
+    Real ep,em,omp,omm;
     Real epsq,emsq;
     Real deold,denew;
     Real dr=1.0e-5;
     Real sqspin=spin*spin;
-    
+
     if(spin>0.)
         rll = 1.+sqrt(1.-sqspin);
     else if(spin<0.)
@@ -81,7 +80,7 @@ void find_isco(Real z1, Real& isco)
             
             
             rold = rnew;
-            omold = omnew;
+            //omold = omnew;
             deold = denew;
             
         }while(stop==0);

@@ -1,6 +1,78 @@
 #include <iostream>
+#include <cmath>
+#include <fstream>
+#include <sstream>
 
 #include "quadtree.hpp"
+
+
+
+QuadTree* readFileToTree(const char* diskdatafile, Real& maxxres, Real& maxyres) {
+  std::ifstream disk(diskdatafile);
+  if (!disk) {
+    std::cerr << "Error: Could not open file!" << std::endl;
+    return nullptr;
+  }
+
+  std::string line;
+  std::getline(disk, line); // Read and ignore the header line
+
+  std::vector<SurfacePoint*> diskdata, dd2;
+  Real minx=INFINITY,maxx=-INFINITY,miny=INFINITY,maxy=-INFINITY;
+  while (std::getline(disk, line)) {
+    std::istringstream iss(line);
+    SurfacePoint* dpp = new SurfacePoint;
+    SurfacePoint* dpunderp = new SurfacePoint;
+    SurfacePoint& dp = *dpp;
+    SurfacePoint& dpunder = *dpunderp;
+    if (!(iss >> dp.x >> dp.y >> dp.density >> dp.u0 >> dp.u1 >> dp.u2 >> dp.u3)) {
+      std::cerr << "Error: Malformed line - " << line << std::endl;
+      continue;
+    }
+    if (dp.y < 0.0) {
+      std::cerr << "Error: Negative disk heights not supported, results might be significantly wrong!" << std::endl;
+      //dp.y *= -1;
+      continue;
+    }
+    dp.y /= DEBUG_DIV;
+    dpunder = dp;
+    dpunder.y *= -1;
+    if(dp.x < minx) minx = dp.x;
+    if(dp.y < miny) miny = dp.y;
+    if(dp.x > maxx) maxx = dp.x;
+    if(dp.y > maxy) maxy = dp.y;
+    if(dpunder.y < miny) miny = dpunder.y;
+    if(dpunder.y > maxy) maxy = dpunder.y;
+    diskdata.push_back(dpp);
+    dd2.push_back(dpunderp);
+  }
+
+  disk.close();
+  QuadTree* treep = new QuadTree(minx-1,miny-1, maxx-minx+2, maxy-miny+2);
+  QuadTree& tree = *treep;
+  for(size_t i=0; i<diskdata.size()-1; i++){
+    SurfaceElement* elem = new SurfaceElement;
+    elem->sp0 = diskdata[i];
+    elem->sp1 = diskdata[i+1];
+    elem->index = 128+(i/RING_DIV)%2;
+    tree.put_element(elem);
+  }
+  for(size_t i=0; i<dd2.size()-1; i++){
+    SurfaceElement* elem = new SurfaceElement;
+    elem->sp0 = dd2[i];
+    elem->sp1 = dd2[i+1];
+    elem->index = 130+(i/RING_DIV)%2;
+    tree.put_element(elem);
+  }
+
+  tree.validate();
+  maxxres=maxx;
+  maxyres=maxy;
+  return treep;
+}
+
+
+
 
 Real checkIntersect(Real x1, Real y1, Real x2,
     Real y2, Real x3, Real y3, Real x4,
@@ -32,7 +104,7 @@ QuadTree::QuadTree(Real x, Real y, Real width, Real height) :
 Real QuadTree::check_intersect(Real x1, Real y1, Real x2, Real y2, SurfaceElement** out){
 
   if(!is_leaf) {
-    for(int i=0; i<4; i++){
+    for(size_t i=0; i<4; i++){
       if(subtrees[i]->overlaps(x1,y1,x2,y2)){
         Real ressub = subtrees[i]->check_intersect(x1,y1,x2,y2,out);
         if(ressub != NO_INTERSECT){
@@ -45,7 +117,7 @@ Real QuadTree::check_intersect(Real x1, Real y1, Real x2, Real y2, SurfaceElemen
       }
     }
   }
-  for(int i=0; i<myelements.size(); i++) {
+  for(size_t i=0; i<myelements.size(); i++) {
         SurfaceElement* elem = myelements[i];
         if (elem->sp0->y==0.0 && elem->sp1->y==0.0){
           //if this raytracer is generalized, this does not really belong here. But we ignore segments with y:=0 of the accretion disk.
@@ -64,7 +136,7 @@ Real QuadTree::check_intersect(Real x1, Real y1, Real x2, Real y2, SurfaceElemen
 size_t QuadTree::size(){
   if(is_leaf) return myelements.size();
   size_t s = myelements.size();
-  for(int i=0; i<4; i++){
+  for(size_t i=0; i<4; i++){
     s += subtrees[i]->size();
   }
   return s;
@@ -127,7 +199,7 @@ void QuadTree::subdivide() {
   subtrees.push_back(q4);
   for(auto vecit = myelements.begin(); vecit != myelements.end(); vecit++){
     SurfaceElement* se = *vecit;
-    for(int i=0; i<4; i++){
+    for(size_t i=0; i<4; i++){
       if(subtrees[i]->fits(se)){
         subtrees[i]->put_element(se);
         myelements.erase(vecit);
@@ -145,7 +217,7 @@ void QuadTree::put_element(SurfaceElement *element){
       subdivide();
     }
   } else {
-    for(int i=0; i<4; i++){
+    for(size_t i=0; i<4; i++){
       if(subtrees[i]->fits(element)){
         subtrees[i]->put_element(element);
         break;

@@ -70,22 +70,19 @@ void correct4VelNorm(Real met[4][4], Real norm, Real* fvel) {
 
 void raytrace(Real xobs, Real yobs, Real iobs,
     Real rin, Real disk_length_combined, RayHit &hit,
-    int &stop_integration, SurfacePoint **diskdata, const size_t ddsize, QuadTree* tree, Real checkr) {
+    int &stop_integration, QuadTree* tree, Real checkr) {
   Real dobs;
   Real xobs2, yobs2;
-  Real atol, rtol;
   Real hstart;
-  Real t0, r0, th0, phi0;
+  Real r0, th0, phi0;
   Real kt0, kr0, kth0, kphi0;
   Real r02, s0, s02;
   Real fact1, fact2, fact3;
-  Real t, r, th, phi;
-  Real kt, kr, kth, kphi;
+  Real r, th, phi;
+  Real kr, kth;
   Real rau, thau, phiau, krau, kthau;
-  Real kyem;
-  Real const0, const1;
-  Real v1, v2;
-  Real h, hnext;
+  Real const1;
+  Real h;
   Real Delta;
   Real spin2 = spin * spin;
 
@@ -102,15 +99,14 @@ void raytrace(Real xobs, Real yobs, Real iobs,
   int check, check2 = 0;
   int i;
 
-  int div;
 
   /* ----- Set computational parameters ----- */
   dobs = 1.0e+8; /* distance of the observer */
   errmin = 1.0e-8;
   errmax = 1.0e-6;
-  atol = 1.0e-10;
+  //atol = 1.0e-10;
   //rtol = 1.0e-10;
-  rtol = 1.0e3;
+  //rtol = 1.0e3;
   Real thtol = 1.0e-8;
   int count, iter;
 
@@ -168,7 +164,7 @@ void raytrace(Real xobs, Real yobs, Real iobs,
   kr = kr0;
   kth = kth0;
 
-  const0 = kt0;
+  //const0 = kt0;
   const1 = r02 * s02 * kphi0 / kt0;
 
   Real obsuarray[4] = {1.0, 0.0, 0.0, 0.0};

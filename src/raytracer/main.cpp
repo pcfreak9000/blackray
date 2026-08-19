@@ -21,9 +21,9 @@ int main(int argc, char *argv[]) {
   std::cout << "Setting up raytracer..." << std::endl;
   if(DEBUG_DIV != 1.0) std::cout << "debug_div is non-one" << std::endl;
   Real spin2;
-  Real E_line, N_0, N_tot, N_tot1, N_tot2, alpha;
-  Real iobs, dobs;
-  Real robs;//, pobs;
+  Real E_line, N_0, N_tot, alpha;
+  Real iobs;
+  Real robs;
   Real robs_i, robs_f, rstep, rstep2, pstep;
   Real xin, xout;
   Real pp, qq;
@@ -35,82 +35,25 @@ int main(int argc, char *argv[]) {
   Real E_obs[imax];
   Real N_obs[imax];
   Real fphi[imax];
-  Real fphi0[imax];
 
 
 
-  int n1, n2, n3;
-  int i, j, m;
+  int i;
   int photon_index = 0;
 
-  char filename_i[256];
   char filename_o[256];
   char filename_o2[256];
 
-  FILE *finput;
   FILE *foutput;
   FILE *foutput_coord;
 
   const char *diskdatafile = argv[10];
 
-  std::ifstream disk(diskdatafile);
-  if (!disk) {
-    std::cerr << "Error: Could not open file!" << std::endl;
-    return 1;
-  }
 
-  std::string line;
-  std::getline(disk, line); // Read and ignore the header line
-
-  std::vector<SurfacePoint*> diskdata, dd2;
-  Real minx=INFINITY,maxx=-INFINITY,miny=INFINITY,maxy=-INFINITY;
-  while (std::getline(disk, line)) {
-    std::istringstream iss(line);
-    SurfacePoint* dpp = new SurfacePoint;
-    SurfacePoint* dpunderp = new SurfacePoint;
-    SurfacePoint& dp = *dpp;
-    SurfacePoint& dpunder = *dpunderp;
-    if (!(iss >> dp.x >> dp.y >> dp.density >> dp.u0 >> dp.u1 >> dp.u2 >> dp.u3)) {
-      std::cerr << "Error: Malformed line - " << line << std::endl;
-      continue;
-    }
-    if (dp.y < 0.0) {
-      std::cerr << "Error: Negative disk heights not supported, results might be significantly wrong!" << std::endl;
-      //dp.y *= -1;
-      continue;
-    }
-    dp.y /= DEBUG_DIV;
-    dpunder = dp;
-    dpunder.y *= -1;
-    if(dp.x < minx) minx = dp.x;
-    if(dp.y < miny) miny = dp.y;
-    if(dp.x > maxx) maxx = dp.x;
-    if(dp.y > maxy) maxy = dp.y;
-    if(dpunder.y < miny) miny = dpunder.y;
-    if(dpunder.y > maxy) maxy = dpunder.y;
-    diskdata.push_back(dpp);
-    dd2.push_back(dpunderp);
-  }
-
-  disk.close();
-  QuadTree* treep = new QuadTree(minx-1,miny-1, maxx-minx+2, maxy-miny+2);
-  QuadTree& tree = *treep;
-  for(int i=0; i<diskdata.size()-1; i++){
-    SurfaceElement* elem = new SurfaceElement;
-    elem->sp0 = diskdata[i];
-    elem->sp1 = diskdata[i+1];
-    elem->index = 128+(i/RING_DIV)%2;
-    tree.put_element(elem);
-  }
-  for(int i=0; i<dd2.size()-1; i++){
-    SurfaceElement* elem = new SurfaceElement;
-    elem->sp0 = dd2[i];
-    elem->sp1 = dd2[i+1];
-    elem->index = 130+(i/RING_DIV)%2;
-    tree.put_element(elem);
-  }
-  tree.validate();
-
+  Real maxx;
+  Real maxy;
+  QuadTree* tree = readFileToTree(diskdatafile, maxx, maxy);
+  if(!tree) return 1;
 
   /* ----- Set free parameters ----- */
 
@@ -226,8 +169,7 @@ int main(int argc, char *argv[]) {
       // printf("entering in the raytrace part of the code\n");
         int stop_integration_condition = 0;
           RayHit hit;
-      raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition,
-          diskdata.data(), diskdata.size(), treep, checkr);
+      raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition, tree, checkr);
       #pragma omp ordered
       { 
       raycount++;
@@ -290,7 +232,6 @@ int main(int argc, char *argv[]) {
 
   fclose(foutput);
   fclose(foutput_coord);
-  tree.validate();
   std::cout << "Done" << std::endl;
   return 0;
 }

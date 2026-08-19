@@ -8,7 +8,6 @@ void intersection(Real x_1, Real y_1, Real z_1,
   Real r1, h1, r2, h2;
   Real pp;
   Real r3, r4, c1;
-  Real xmax, xmin;
 
   r1 = x_1 * sin(y_1);
   h1 = x_1 * cos(y_1);

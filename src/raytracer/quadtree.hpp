@@ -30,3 +30,5 @@ private:
   bool overlaps(Real x0, Real y0, Real x1, Real y1);
   bool fully_inside(Real x0, Real y0, Real x1, Real y1);
 };
+
+QuadTree* readFileToTree(const char* diskdatafile, Real& maxxres, Real& maxyres);
