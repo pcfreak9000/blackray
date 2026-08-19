@@ -26,7 +26,7 @@ using Real = long double;
 #define CUBE(x) ((x)*(x)*(x))
 
 constexpr Real Pi = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282L;
-
+//const Real Pi = std::acos(-1.0);
 
 extern Real epsi3, a13, a22, a52;
 extern Real spin;

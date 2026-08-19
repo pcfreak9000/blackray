@@ -61,11 +61,11 @@ void correct4VelNorm(Real met[4][4], Real norm, Real* fvel) {
   Real Fp1 = norm+1;
   
   Real radi = SQR(g_tt*udt)+2.0*g_tt*udt*g_tp*up-g_tt*Fp1+SQR(g_tp*up);
-  fvel[0] = -(sqrt(radi)+g_tp*up)/g_tt;
+  fvel[0] = -(std::sqrt(radi)+g_tp*up)/g_tt;
   
   //Real dif = norm+1;
   //Real deltaut = dif/met[0][0];
-  //fvel[0] = sqrt(fvel[0]*fvel[0]-deltaut);
+  //fvel[0] = std::sqrt(fvel[0]*fvel[0]-deltaut);
 }
 
 void raytrace(Real xobs, Real yobs, Real iobs,
@@ -116,25 +116,25 @@ void raytrace(Real xobs, Real yobs, Real iobs,
   xobs2 = xobs * xobs;
   yobs2 = yobs * yobs;
 
-  fact1 = yobs * sin(iobs) + dobs * cos(iobs);
-  fact2 = dobs * sin(iobs) - yobs * cos(iobs);
+  fact1 = yobs * std::sin(iobs) + dobs * std::cos(iobs);
+  fact2 = dobs * std::sin(iobs) - yobs * std::cos(iobs);
 
   r02 = xobs2 + yobs2 + dobs * dobs;
 
-  r0 = sqrt(r02);
-  th0 = acos(fact1 / r0);
-  phi0 = atan2(xobs, fact2);
+  r0 = std::sqrt(r02);
+  th0 = std::acos(fact1 / r0);
+  phi0 = std::atan2(xobs, fact2);
 
-  s0 = sin(th0);
+  s0 = std::sin(th0);
   s02 = s0 * s0;
 
   kr0 = dobs / r0;
-  kth0 = -(cos(iobs) - dobs * fact1 / r02) / sqrt(r02 - fact1 * fact1);
-  kphi0 = -xobs * sin(iobs) / (xobs2 + fact2 * fact2);
+  kth0 = -(std::cos(iobs) - dobs * fact1 / r02) / std::sqrt(r02 - fact1 * fact1);
+  kphi0 = -xobs * std::sin(iobs) / (xobs2 + fact2 * fact2);
 
   metric(r0, th0, met);
 
-  fact3 = sqrt(
+  fact3 = std::sqrt(
       met[0][3] * met[0][3] * kphi0 * kphi0
           - met[0][0]
               * (met[1][1] * kr0 * kr0 + met[2][2] * kth0 * kth0
@@ -153,7 +153,7 @@ void raytrace(Real xobs, Real yobs, Real iobs,
   c02 = 1. - s02;
 
   carter = yobs2 - spin2 * c02 + xobs2 * c02;
-  carter = sqrt(carter);
+  carter = std::sqrt(carter);
 
   /* ----- solve geodesic equations ----- */
 
@@ -351,10 +351,10 @@ void raytrace(Real xobs, Real yobs, Real iobs,
 
     //check if the new position intersects the accretion disk
     //convert coordinates of current and previous position via a BL-cartesian conversion
-    Real xcoord = std::sqrt(r * r + spin2) * sin(th);
-    Real ycoord = r * cos(th);
-    Real xcoordprev = std::sqrt(rau * rau + spin2) * sin(thau);
-    Real ycoordprev = rau * cos(thau);
+    Real xcoord = std::sqrt(r * r + spin2) * std::sin(th);
+    Real ycoord = r * std::cos(th);
+    Real xcoordprev = std::sqrt(rau * rau + spin2) * std::sin(thau);
+    Real ycoordprev = rau * std::cos(thau);
     int res = NO_INTERSECT;
     int index = 0;
 
@@ -370,7 +370,7 @@ void raytrace(Real xobs, Real yobs, Real iobs,
         prevh = h;
       }
       check2 = 1; //don't adapt stepsize anymore, this is now done manually to reach certain tolerances
-      if (fabs(th - thau) <= thtol) {
+      if (std::fabs(th - thau) <= thtol) {
         count++;
       }
       if (count > 0) {
@@ -413,9 +413,9 @@ void raytrace(Real xobs, Real yobs, Real iobs,
     metric(r, th, met);
 
 
-    //Real x = std::sqrt(r);
-    //Real p_ut = (0.0 + CUBE(x))/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
-    //Real p_uph = 1/std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
+    //Real x = std::std::sqrt(r);
+    //Real p_ut = (0.0 + CUBE(x))/std::std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
+    //Real p_uph = 1/std::std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
     //Real uarray[4] = {p_ut,0.0,0.0,p_uph};
     //Real uarray[4] = {1,0,0,0};
     Real uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
@@ -474,10 +474,10 @@ void raytrace(Real xobs, Real yobs, Real iobs,
       Real gfactorforcosem;
       redshift(xem[1],const1,gfactorforcosem);
       /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
-      cosem = carter * gfactorforcosem / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
+      cosem = carter * gfactorforcosem / std::sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
       //Workaround for redshift function giving nan...
       if(std::isnan(cosem)) {
-        cosem = carter * gfactor / sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
+        cosem = carter * gfactor / std::sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
         if(cosem > 1.05){
           std::cout << "Cosem was nan, then fixed cosem was > 1.05, ignoring ray: " << cosem << std::endl;
           stop_integration = 6;

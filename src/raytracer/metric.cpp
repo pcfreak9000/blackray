@@ -72,7 +72,7 @@ void metric(Real r, Real th, Real mn[][4]) {
       t16;
   Real g_tt, g_rr, g_thth, g_pp, g_tp; /*metric components with lowered indicies*/
 
-  t1 = cos(th);
+  t1 = std::cos(th);
   t2 = spin * spin;
   t3 = r * r;
   //t4 = pow(t3, 0.2e1);
@@ -82,7 +82,7 @@ void metric(Real r, Real th, Real mn[][4]) {
   t1 = t2 * SQR(t1);
   t6 = (t1 + t3) * r + epsi3;
   t7 = a22 + t3;
-  t8 = sin(th);
+  t8 = std::sin(th);
   t9 = t3 + t2;
   //t8 = pow(t8, 0.2e1);
   t8 = SQR(t8);
@@ -141,7 +141,7 @@ void metric_rderivatives(Real r, Real th, Real dmn[][4]) {
       t16, t17, t18, t19, t20, t21, t22, t23;
   Real dgttdr, dgtpdr, dgppdr;
 
-  t1 = cos(th);
+  t1 = std::cos(th);
   t2 = spin * spin;
   t3 = r * r;
   //t4 = pow(t3, 0.2e1);
@@ -151,7 +151,7 @@ void metric_rderivatives(Real r, Real th, Real dmn[][4]) {
   t1 = t2 * SQR(t1);
   t6 = (t1 + t3) * r + epsi3;
   t7 = a22 + t3;
-  t8 = sin(th);
+  t8 = std::sin(th);
   t9 = t3 + t2;
   t10 = -0.2e1 * r + t9;
   //t8 = pow(t8, 0.2e1);

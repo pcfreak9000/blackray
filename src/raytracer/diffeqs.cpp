@@ -20,7 +20,7 @@ void diffeqs(Real b, Real vars[], Real diffs[]) {
   r = vars[0];
   th = vars[1];
 
-  t1 = cos(th);
+  t1 = std::cos(th);
   t2 = r * r; //r^2
   //t3 = pow(t2, 0.2e1); //r^4
   t3 = SQR(t2);
@@ -32,7 +32,7 @@ void diffeqs(Real b, Real vars[], Real diffs[]) {
   t8 = t7 * SQR(t1);
   t9 = (t8 + t2) * r + epsi3;
   t10 = a22 + t2;
-  t11 = sin(th);
+  t11 = std::sin(th);
   t12 = t7 + t2;
   //t13 = pow(t10, 0.2e1);
   t13 = SQR(t10);

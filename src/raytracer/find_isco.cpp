@@ -19,9 +19,9 @@ void find_isco(Real z1, Real& isco)
     Real sqspin=spin*spin;
 
     if(spin>0.)
-        rll = 1.+sqrt(1.-sqspin);
+        rll = 1.+std::sqrt(1.-sqspin);
     else if(spin<0.)
-        rll = 1.+sqrt(1.-sqspin);
+        rll = 1.+std::sqrt(1.-sqspin);
     else
         rll = 1.;
     
@@ -31,10 +31,10 @@ void find_isco(Real z1, Real& isco)
         metric(rold-dr,Pi/2.,mnm);
         metric_rderivatives(rold+dr,Pi/2.,dmnp);
         metric_rderivatives(rold-dr,Pi/2.,dmnm);
-        omp = (-dmnp[0][3]+sqrt(dmnp[0][3]*dmnp[0][3]-dmnp[0][0]*dmnp[3][3]))/dmnp[3][3];
-        omm = (-dmnm[0][3]+sqrt(dmnm[0][3]*dmnm[0][3]-dmnm[0][0]*dmnm[3][3]))/dmnm[3][3];
-        ep = - (mnp[0][0]+mnp[0][3]*omp)/sqrt(-mnp[0][0]-2.*mnp[0][3]*omp-mnp[3][3]*omp*omp);
-        em = - (mnm[0][0]+mnm[0][3]*omm)/sqrt(-mnm[0][0]-2.*mnm[0][3]*omm-mnm[3][3]*omm*omm);
+        omp = (-dmnp[0][3]+std::sqrt(dmnp[0][3]*dmnp[0][3]-dmnp[0][0]*dmnp[3][3]))/dmnp[3][3];
+        omm = (-dmnm[0][3]+std::sqrt(dmnm[0][3]*dmnm[0][3]-dmnm[0][0]*dmnm[3][3]))/dmnm[3][3];
+        ep = - (mnp[0][0]+mnp[0][3]*omp)/std::sqrt(-mnp[0][0]-2.*mnp[0][3]*omp-mnp[3][3]*omp*omp);
+        em = - (mnm[0][0]+mnm[0][3]*omm)/std::sqrt(-mnm[0][0]-2.*mnm[0][3]*omm-mnm[3][3]*omm*omm);
         deold = 0.5*(ep-em)/dr;
         
         do{
@@ -49,13 +49,13 @@ void find_isco(Real z1, Real& isco)
             metric(rnew-dr,Pi/2.,mnm);
             metric_rderivatives(rnew+dr,Pi/2.,dmnp);
             metric_rderivatives(rnew-dr,Pi/2.,dmnm);
-            omp = (-dmnp[0][3]+sqrt(dmnp[0][3]*dmnp[0][3]-dmnp[0][0]*dmnp[3][3]))/dmnp[3][3];
-            omm = (-dmnm[0][3]+sqrt(dmnm[0][3]*dmnm[0][3]-dmnm[0][0]*dmnm[3][3]))/dmnm[3][3];
-            ep = - (mnp[0][0]+mnp[0][3]*omp)/sqrt(-mnp[0][0]-2.*mnp[0][3]*omp-mnp[3][3]*omp*omp);
-            em = - (mnm[0][0]+mnm[0][3]*omm)/sqrt(-mnm[0][0]-2.*mnm[0][3]*omm-mnm[3][3]*omm*omm);
+            omp = (-dmnp[0][3]+std::sqrt(dmnp[0][3]*dmnp[0][3]-dmnp[0][0]*dmnp[3][3]))/dmnp[3][3];
+            omm = (-dmnm[0][3]+std::sqrt(dmnm[0][3]*dmnm[0][3]-dmnm[0][0]*dmnm[3][3]))/dmnm[3][3];
+            ep = - (mnp[0][0]+mnp[0][3]*omp)/std::sqrt(-mnp[0][0]-2.*mnp[0][3]*omp-mnp[3][3]*omp*omp);
+            em = - (mnm[0][0]+mnm[0][3]*omm)/std::sqrt(-mnm[0][0]-2.*mnm[0][3]*omm-mnm[3][3]*omm*omm);
             denew = 0.5*(ep-em)/dr;
             
-            if(fabs(denew)<fabs(detol)) {
+            if(std::fabs(denew)<std::fabs(detol)) {
                 //printf("denew = %Le, deold = %Le\n",denew,deold);
                 stop = 1;
             }
@@ -100,17 +100,17 @@ void find_isco(Real z1, Real& isco)
             metric(rnew-dr,Pi/2.,mnm);
             metric_rderivatives(rnew+dr,Pi/2.,dmnp);
             metric_rderivatives(rnew-dr,Pi/2.,dmnm);
-            omp = (-dmnp[0][3]+sqrt(dmnp[0][3]*dmnp[0][3]-dmnp[0][0]*dmnp[3][3]))/dmnp[3][3];
-            omm = (-dmnm[0][3]+sqrt(dmnm[0][3]*dmnm[0][3]-dmnm[0][0]*dmnm[3][3]))/dmnm[3][3];
+            omp = (-dmnp[0][3]+std::sqrt(dmnp[0][3]*dmnp[0][3]-dmnp[0][0]*dmnp[3][3]))/dmnp[3][3];
+            omm = (-dmnm[0][3]+std::sqrt(dmnm[0][3]*dmnm[0][3]-dmnm[0][0]*dmnm[3][3]))/dmnm[3][3];
             epsq = -mnp[0][0]-2.*mnp[0][3]*omp-mnp[3][3]*omp*omp;
             emsq = -mnm[0][0]-2.*mnm[0][3]*omm-mnm[3][3]*omm*omm;
             
             if(epsq>0. && emsq>0.){
-                ep = - (mnp[0][0]+mnp[0][3]*omp)/sqrt(epsq);
-                em = - (mnm[0][0]+mnm[0][3]*omm)/sqrt(emsq);
+                ep = - (mnp[0][0]+mnp[0][3]*omp)/std::sqrt(epsq);
+                em = - (mnm[0][0]+mnm[0][3]*omm)/std::sqrt(emsq);
                 denew = 0.5*(ep-em)/dr;
                 
-                if(fabs(denew)<fabs(detol)) {
+                if(std::fabs(denew)<std::fabs(detol)) {
                     //printf("denew = %Le, deold = %Le\n",denew,deold);
                     stop = 1;
                     //break;

@@ -70,8 +70,8 @@ int main(int argc, char *argv[]) {
 
   spin2 = spin * spin;
 
-  Real maxr_xdir = sqrt(SQR(maxx+10.0)-spin2)+10.0;
-  Real maxr_ydir = sqrt(SQR(maxy+10.0))+10.0;
+  Real maxr_xdir = std::sqrt(SQR(maxx+10.0)-spin2)+10.0;
+  Real maxr_ydir = std::sqrt(SQR(maxy+10.0))+10.0;
   Real checkr = maxr_ydir;
   if(maxr_xdir > maxr_ydir) checkr = maxr_xdir;
 
@@ -163,8 +163,8 @@ int main(int argc, char *argv[]) {
       Real pobs = pobs_data[pobs_index];
     //for (Real pobs = 0; pobs < 2 * Pi - 0.5 * pstep; pobs = pobs + pstep) {
       Real xobs, yobs;
-      xobs = robs * cos(pobs);
-      yobs = robs * sin(pobs);
+      xobs = robs * std::cos(pobs);
+      yobs = robs * std::sin(pobs);
       /*entering in raytrace_new.cpp*/
       // printf("entering in the raytrace part of the code\n");
         int stop_integration_condition = 0;
@@ -192,7 +192,7 @@ int main(int argc, char *argv[]) {
         for (i = 0; i <= imax - 2; i++) {
           if (E_obs[i] < pp && E_obs[i + 1] > pp) {
             qq = gfactor * gfactor * gfactor * gfactor;
-            qq = qq * pow(hit.r, alpha);
+            qq = qq * std::pow(hit.r, alpha);
 
             fphi[i] = fphi[i] + qq;
           }

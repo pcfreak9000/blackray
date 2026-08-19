@@ -16,7 +16,7 @@ void redshift(Real r, Real ktkp, Real& gg) {
 
   metric_rderivatives(r, th, met_rder);
 
-  Omega = (-met_rder[0][3] + sqrt((met_rder[0][3] * met_rder[0][3]) -
+  Omega = (-met_rder[0][3] + std::sqrt((met_rder[0][3] * met_rder[0][3]) -
                                   (met_rder[0][0] * met_rder[3][3]))) /
           (met_rder[3][3]);
 
@@ -25,7 +25,7 @@ void redshift(Real r, Real ktkp, Real& gg) {
   // uet = sqrt(-g00 - 2.*g03*Omega - g33*Omega*Omega);
 
   uet =
-      sqrt(-met[0][0] - (2 * met[0][3] * Omega) - (met[3][3] * Omega * Omega));
+      std::sqrt(-met[0][0] - (2 * met[0][3] * Omega) - (met[3][3] * Omega * Omega));
 
   gg = uet / (1. - ktkp * Omega);
 }
