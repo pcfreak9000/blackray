@@ -54,6 +54,7 @@ struct SurfacePoint {
 
 struct IntegratorData {
   Real r, th, rprev, thprev, kr, kth, b, obsenergy, const1, carter;
+  Real kvec[4];
 };
 
 struct SurfaceElement {

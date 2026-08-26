@@ -39,7 +39,8 @@ def main(preptuple):
             4: (0.0, 0.0, 0.0),   # horizon cross, black
             5: (0.0, 0.2, 0.0),   # horizon cross, green-black
             7: (0.3, 0.3, 0.3),    # escape to infinity, gray
-            512: (1.0,1.0,0.1)
+            512: (1.0,1.0,0.1),
+            600: (0.1,1.0,0.1)
         }
         interpolmeth='linear'
         # Prepare RGB channels

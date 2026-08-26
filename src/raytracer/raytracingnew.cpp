@@ -381,7 +381,7 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
     }
   } while (stop_integration == 0);
   if (stop_integration != 512
-      && (stop_integration < 128 || stop_integration > 131)) {
+      && (stop_integration < 128 || stop_integration > 131) && stop_integration != 600) {
     hit.r = r;
     hit.gfactor = 1.0;
     hit.cosem = 0.0;

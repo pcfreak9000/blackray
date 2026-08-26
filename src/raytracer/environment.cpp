@@ -33,7 +33,9 @@ int get_interpolated_sp(const Real x1, const Real y1, const Real x2,
   return NO_INTERSECT;
 }
 
-GRMHDDisk::GRMHDDisk(QuadTree *tree, Real checkr) : tree(tree), checkr(checkr){}
+GRMHDDisk::GRMHDDisk(QuadTree *tree, Real checkr) :
+    tree(tree), checkr(checkr) {
+}
 
 int GRMHDDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
     const Real &thprev, SurfacePoint &outSurface) {
@@ -133,7 +135,6 @@ int GRMHDDisk::intersect(const IntegratorData &id,
 
     Real karray[4] = { ktcalc, id.kr, id.kth, kphicalc };
 
-
 #ifdef DEBUG_FMOM_NORM
         Real knorm;
         scalarProduct(met, karray, karray, knorm);
@@ -173,7 +174,9 @@ int GRMHDDisk::intersect(const IntegratorData &id,
   return surfacepoint.index;
 }
 
-ThinDisk::ThinDisk(Real innerr, Real outerr) : innerr(innerr), outerr(outerr){}
+ThinDisk::ThinDisk(Real innerr, Real outerr) :
+    innerr(innerr), outerr(outerr) {
+}
 
 int ThinDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
     const Real &thprev, SurfacePoint &outSurface) {
@@ -194,6 +197,37 @@ int ThinDisk::intersect(const IntegratorData &id,
   return 512;
 }
 
+PlungingRegion::PlungingRegion(Real isco) :
+    isco(isco) {
+}
+
+int PlungingRegion::checkIntersect(const Real &r, const Real &th,
+    const Real &rprev, const Real &thprev, SurfacePoint &outSurface) {
+  if (r > isco && rprev > isco) return NO_INTERSECT;
+  if ((th > Pi / 2.0 && thprev < Pi / 2.0)
+      || (th < Pi / 2.0 && thprev > Pi / 2.0)) {
+    return INTERSECT;
+  }
+  return NO_INTERSECT;
+}
+int PlungingRegion::intersect(const IntegratorData &id,
+    const SurfacePoint &surfacepoint, RayHit &hit) {
+  hit.r = id.r;
+  Real met[4][4];
+  metric(id.r, id.th, met);
+  Real g_tt, g_pp, g_tp;
+  g_tt = met[0][0];
+  g_pp = met[3][3];
+  g_tp = met[0][3];
+  Real denom = (g_tt * g_pp - g_tp * g_tp);
+  Real ktcalc = -(g_pp + id.b * g_tp) / denom;
+  Real kphicalc = (g_tp + id.b * g_tt) / denom;
+
+  Real karray[4] = { ktcalc, id.kr, id.kth, kphicalc };
+  redshift_plunge(isco, hit.r, karray, hit.gfactor);
+  hit.cosem = id.carter * hit.gfactor / std::sqrt(SQR(hit.r) + epsi3 / hit.r);
+  return 600;
+}
 
 void Env::addEntity(Entity *entity) {
   this->ents.push_back(entity);
@@ -201,7 +235,7 @@ void Env::addEntity(Entity *entity) {
 Entity* Env::checkIntersect(const Real &r, const Real &th, const Real &rprev,
     const Real &thprev, SurfacePoint &outsurf, int &res) {
   for (Entity *ent : this->ents) {
-    if (ent->checkIntersect(r, th, rprev, thprev, outsurf)==INTERSECT) {
+    if (ent->checkIntersect(r, th, rprev, thprev, outsurf) == INTERSECT) {
       res = INTERSECT;
       return ent;
     }

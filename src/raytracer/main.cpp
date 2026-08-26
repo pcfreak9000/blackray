@@ -78,9 +78,11 @@ int main(int argc, char *argv[]) {
   if(maxr_xdir > maxr_ydir) checkr = maxr_xdir;
   find_isco(15.0, isco); /* Depends upon the properties of BH */
   GRMHDDisk disk(tree, checkr);
-  ThinDisk thin(50, 100);
+  ThinDisk thin(isco, 9);
+  PlungingRegion plunge(isco);
   Env env;
-  env.addEntity(&disk);
+  env.addEntity(&thin);
+  env.addEntity(&plunge);
   iobs = Pi / 180 * iobs_deg; /* inclination angle of the observer in rad */
   // iobs = acos(iobs_deg);
 
@@ -97,12 +99,12 @@ int main(int argc, char *argv[]) {
 
   /*** thin disk parameters  ***/
   xin = isco; /* inner radius of the accretion disk; set isco */
-  xout = 200; /* outer radius of the accretion disk */
+  xout = 10; /* outer radius of the accretion disk */
 
   /* ----- Set computational parameters ----- */
 
   robs_i = 1;
-  robs_f = 215;
+  robs_f = 12;
 
   // rstep  = 1.008;
   rstep2 = (rstep - 1) / rstep;
@@ -179,7 +181,7 @@ int main(int argc, char *argv[]) {
       { 
       raycount++;
       if ((stop_integration_condition >= 128
-          && stop_integration_condition <= 131)||stop_integration_condition == 512) {
+          && stop_integration_condition <= 131)||stop_integration_condition == 512||stop_integration_condition==600) {
         hitraycount++;
         fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", photon_index, xobs,
             yobs, hit.r, hit.gfactor, hit.cosem);
