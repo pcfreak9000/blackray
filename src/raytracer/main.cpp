@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
   QuadTree* tree = readFileToTree(diskdatafile, maxx, maxy);
   if(!tree) return 1;
 
+
+
   /* ----- Set free parameters ----- */
 
   // Input parameters: spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep
@@ -74,7 +76,11 @@ int main(int argc, char *argv[]) {
   Real maxr_ydir = std::sqrt(SQR(maxy+10.0))+10.0;
   Real checkr = maxr_ydir;
   if(maxr_xdir > maxr_ydir) checkr = maxr_xdir;
-
+  find_isco(15.0, isco); /* Depends upon the properties of BH */
+  GRMHDDisk disk(tree, checkr);
+  ThinDisk thin(50, 100);
+  Env env;
+  env.addEntity(&disk);
   iobs = Pi / 180 * iobs_deg; /* inclination angle of the observer in rad */
   // iobs = acos(iobs_deg);
 
@@ -86,7 +92,6 @@ int main(int argc, char *argv[]) {
 
   /* ----- Set inner and outer radius of the disk ----- */
 
-  find_isco(15.0, isco); /* Depends upon the properties of BH */
 
   /*------------------------------------------*/
 
@@ -169,12 +174,12 @@ int main(int argc, char *argv[]) {
       // printf("entering in the raytrace part of the code\n");
         int stop_integration_condition = 0;
           RayHit hit;
-      raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition, tree, checkr);
+      raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition, &env);
       #pragma omp ordered
       { 
       raycount++;
-      if (stop_integration_condition >= 128
-          && stop_integration_condition <= 131) {
+      if ((stop_integration_condition >= 128
+          && stop_integration_condition <= 131)||stop_integration_condition == 512) {
         hitraycount++;
         fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", photon_index, xobs,
             yobs, hit.r, hit.gfactor, hit.cosem);
@@ -185,7 +190,7 @@ int main(int argc, char *argv[]) {
         pp = gfactor * E_line;
         if(!RESTRICT_DEBUGFILE_CRIT && raycount % DEBUGFILE_OUT_DIV == 0){
           tmpOutFile << xobs << " " << yobs << " " << gfactor << " "
-              << stop_integration_condition << " " << hit.hc << std::endl;
+              << stop_integration_condition << " " << std::endl;
         }
         /* --- integration - part 1 --- */
 
@@ -200,7 +205,7 @@ int main(int argc, char *argv[]) {
       } else {
         if((!RESTRICT_DEBUGFILE_CRIT && raycount % DEBUGFILE_OUT_DIV == 0) || ( stop_integration_condition==255 || stop_integration_condition==6 )){
         tmpOutFile << xobs << " " << yobs << " " << 1.0 << " "
-            << stop_integration_condition << " " << hit.hc << std::endl;
+            << stop_integration_condition << std::endl;
         }
       }
       }

@@ -19,13 +19,16 @@
 
 #define imax 400
 
+#define THIN
+
 using Real = long double;
 #define NO_INTERSECT -1
 #define INTERSECT 0
 #define SQR(x) ((x)*(x))
 #define CUBE(x) ((x)*(x)*(x))
 
-constexpr Real Pi = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282L;
+constexpr Real Pi =
+    3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282L;
 //const Real Pi = std::acos(-1.0);
 
 extern Real epsi3, a13, a22, a52;
@@ -36,8 +39,21 @@ extern int phicount;
 struct SurfacePoint {
   Real x;
   Real y;
-  Real u0, u1, u2, u3;
+  union {
+    struct {
+      Real u0, u1, u2, u3;
+    };
+    //second struct probably useless but symmetry
+    struct {
+      Real u[4];
+    };
+  };
   Real density;
+  int index;
+};
+
+struct IntegratorData {
+  Real r, th, rprev, thprev, kr, kth, b, obsenergy, const1, carter;
 };
 
 struct SurfaceElement {
@@ -50,5 +66,4 @@ struct RayHit {
   Real cosem;
   Real gfactor;
   Real r;
-  Real hc;
 };

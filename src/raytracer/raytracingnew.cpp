@@ -9,68 +9,15 @@
 #include "redshift.hpp"
 #include "metric.hpp"
 
-Real interpolate(Real a, Real b, Real f) {
-  return (1.0 - f) * a + f * b;
-}
+#include "environment.hpp"
 
+//in environment.cpp, clean up
+void scalarProduct(Real met[4][4], Real *fvec0, Real *fvec1, Real &scal);
+//void correct4VelNorm(Real met[4][4], Real norm, Real *fvel);
 
-
-
-//finds any intersection. it is not guranteed (but very likely) that it is the closest one, i.e. the first hit. Sufficiently small stepsize should circuvent the problem,
-//as well as retaking the step with a smaller stepsize.
-//this might interpolate between a mesh cell right beyond the horizon, which might contain invalid data, and the first cell outside the horizon,
-//for disk shapes which come very close to the horizon
-//at the moment, this does not seem to be a problem, but keep this in mind, especially if and when doing a clean rewrite of this
-int get_interpolated_sp(const Real x1, const Real y1,
-    const Real x2, const Real y2, QuadTree* quadtree, SurfacePoint &out, int& index) {
-  SurfaceElement* elem;
-  Real result = quadtree->check_intersect(x1,y1,x2,y2,&elem);
-  if(result != NO_INTERSECT) {
-    index = elem->index;
-    Real xi = (elem->sp0->x) + result * ((elem->sp1->x) - (elem->sp0->x));
-    Real yi = (elem->sp0->y) + result * ((elem->sp1->y) - (elem->sp0->y));
-    out.x = xi;
-    out.y = yi;
-    out.density = interpolate(elem->sp0->density, elem->sp1->density, result);
-    //should be zero if either p is zero because linear interpolation of these velocities at that place is probably not physically
-    out.u0 = interpolate(elem->sp0->u0, elem->sp1->u0, result);
-    out.u1 = interpolate(elem->sp0->u1, elem->sp1->u1, result);
-    out.u2 = interpolate(elem->sp0->u2, elem->sp1->u2, result);
-    out.u3 = interpolate(elem->sp0->u3, elem->sp1->u3, result);
-    return INTERSECT;
-  }
-  index = 0;
-  return NO_INTERSECT;
-}
-
-
-void scalarProduct(Real met[4][4], Real* fvec0, Real* fvec1, Real& scal) {
-  scal = 0.0;
-  for(int i=0; i<4; i++) {
-    for(int j=0; j<4; j++) {
-      scal += met[i][j]*fvec0[i]*fvec1[j];
-    }
-  }
-}
-
-void correct4VelNorm(Real met[4][4], Real norm, Real* fvel) {
-  Real g_tt = met[0][0];
-  Real g_tp = met[0][3];
-  Real udt = fvel[0];
-  Real up = fvel[3];
-  Real Fp1 = norm+1;
-  
-  Real radi = SQR(g_tt*udt)+2.0*g_tt*udt*g_tp*up-g_tt*Fp1+SQR(g_tp*up);
-  fvel[0] = -(std::sqrt(radi)+g_tp*up)/g_tt;
-  
-  //Real dif = norm+1;
-  //Real deltaut = dif/met[0][0];
-  //fvel[0] = std::sqrt(fvel[0]*fvel[0]-deltaut);
-}
-
-void raytrace(Real xobs, Real yobs, Real iobs,
-    Real rin, Real disk_length_combined, RayHit &hit,
-    int &stop_integration, QuadTree* tree, Real checkr) {
+void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
+    Real disk_length_combined, RayHit &hit, int &stop_integration,
+    Env* env) {
   Real dobs;
   Real xobs2, yobs2;
   Real hstart;
@@ -86,19 +33,18 @@ void raytrace(Real xobs, Real yobs, Real iobs,
   Real Delta;
   Real spin2 = spin * spin;
 
-  Real carter, cosem, c02;
+  Real carter, c02;
   Real b;
 
   Real met[4][4];
-  Real diffs[5], vars[5], vars_temp[5], vars_4th[5], vars_5th[5], k1[5],
-      k2[5], k3[5], k4[5], k5[5], k6[5];
-  Real xem[4];
-  Real gfactor;
+  Real diffs[5], vars[5], vars_temp[5], vars_4th[5], vars_5th[5], k1[5], k2[5],
+      k3[5], k4[5], k5[5], k6[5];
+  //Real xem[4];
+  //Real gfactor;
   Real err, errmin, errmax;
 
   int check, check2 = 0;
   int i;
-
 
   /* ----- Set computational parameters ----- */
   dobs = 1.0e+8; /* distance of the observer */
@@ -129,7 +75,8 @@ void raytrace(Real xobs, Real yobs, Real iobs,
   s02 = s0 * s0;
 
   kr0 = dobs / r0;
-  kth0 = -(std::cos(iobs) - dobs * fact1 / r02) / std::sqrt(r02 - fact1 * fact1);
+  kth0 = -(std::cos(iobs) - dobs * fact1 / r02)
+      / std::sqrt(r02 - fact1 * fact1);
   kphi0 = -xobs * std::sin(iobs) / (xobs2 + fact2 * fact2);
 
   metric(r0, th0, met);
@@ -167,10 +114,10 @@ void raytrace(Real xobs, Real yobs, Real iobs,
   //const0 = kt0;
   const1 = r02 * s02 * kphi0 / kt0;
 
-  Real obsuarray[4] = {1.0, 0.0, 0.0, 0.0};
-  Real obskarray[4] = {kt0, kr0, kth0, kphi0};
+  Real obsuarray[4] = { 1.0, 0.0, 0.0, 0.0 };
+  Real obskarray[4] = { kt0, kr0, kth0, kphi0 };
   Real obsenergy;
-  scalarProduct(met,obsuarray,obskarray,obsenergy);
+  scalarProduct(met, obsuarray, obskarray, obsenergy);
 
   stop_integration = 0;
 
@@ -178,36 +125,33 @@ void raytrace(Real xobs, Real yobs, Real iobs,
   count = 0;
   iter = 0;
 
-  Real a1 = 1.0 / 4.0;
-  Real b1 = 3.0 / 32.0;
-  Real b2 = 9.0 / 32.0;
-  Real c1 = 1932.0 / 2197.0;
-  Real c2 = -7200.0 / 2197.0;
-  Real c3 = 7296.0 / 2197.0;
-  Real d1 = 439.0 / 216.0;
-  Real d2 = -8.0;
-  Real d3 = 3680.0 / 513.0;
-  Real d4 = -845.0 / 4104.0;
-  Real e1 = -8.0 / 27.0;
-  Real e2 = 2.0;
-  Real e3 = -3544.0 / 2565.0;
-  Real e4 = 1859.0 / 4104.0;
-  Real e5 = -11.0 / 40.0;
-  Real f1 = 25.0 / 216.0;
-  Real f2 = 0.0;
-  Real f3 = 1408.0 / 2565.0;
-  Real f4 = 2197.0 / 4104.0;
-  Real f5 = -1.0 / 5.0;
-  Real g1 = 16.0 / 135.0;
-  Real g2 = 0.0;
-  Real g3 = 6656.0 / 12825.0;
-  Real g4 = 28561.0 / 56430.0;
-  Real g5 = -9.0 / 50.0;
-  Real g6 = 2.0 / 55.0;
-  SurfacePoint spi;
+  constexpr Real a1 = 1.0 / 4.0;
+  constexpr Real b1 = 3.0 / 32.0;
+  constexpr Real b2 = 9.0 / 32.0;
+  constexpr Real c1 = 1932.0 / 2197.0;
+  constexpr Real c2 = -7200.0 / 2197.0;
+  constexpr Real c3 = 7296.0 / 2197.0;
+  constexpr Real d1 = 439.0 / 216.0;
+  constexpr Real d2 = -8.0;
+  constexpr Real d3 = 3680.0 / 513.0;
+  constexpr Real d4 = -845.0 / 4104.0;
+  constexpr Real e1 = -8.0 / 27.0;
+  constexpr Real e2 = 2.0;
+  constexpr Real e3 = -3544.0 / 2565.0;
+  constexpr Real e4 = 1859.0 / 4104.0;
+  constexpr Real e5 = -11.0 / 40.0;
+  constexpr Real f1 = 25.0 / 216.0;
+  constexpr Real f2 = 0.0;
+  constexpr Real f3 = 1408.0 / 2565.0;
+  constexpr Real f4 = 2197.0 / 4104.0;
+  constexpr Real f5 = -1.0 / 5.0;
+  constexpr Real g1 = 16.0 / 135.0;
+  constexpr Real g2 = 0.0;
+  constexpr Real g3 = 6656.0 / 12825.0;
+  constexpr Real g4 = 28561.0 / 56430.0;
+  constexpr Real g5 = -9.0 / 50.0;
+  constexpr Real g6 = 2.0 / 55.0;
   Real prevh = -1.0;
-
-
 
   do {
     iter++;
@@ -276,12 +220,11 @@ void raytrace(Real xobs, Real yobs, Real iobs,
         vars_5th[i] = vars[i] + g1 * k1[i] + g2 * k2[i] + g3 * k3[i]
             + g4 * k4[i] + g5 * k5[i] + g6 * k6[i];
 
-        err = fabs((vars_4th[i] - vars_5th[i]) / std::max(vars_4th[i], vars[i]));
+        err = fabs(
+            (vars_4th[i] - vars_5th[i]) / std::max(vars_4th[i], vars[i]));
 
-        if (err > errmax && check2 == 0)
-          check = 1;
-        else if (err < errmin && check != 1 && check2 == 0)
-          check = -1;
+        if (err > errmax && check2 == 0) check = 1;
+        else if (err < errmin && check != 1 && check2 == 0) check = -1;
       }
 
       if (check == 1) {
@@ -291,8 +234,7 @@ void raytrace(Real xobs, Real yobs, Real iobs,
           std::cout << "descale0" << std::endl;
         }
 #endif
-      } else if (check == -1)
-        h *= 2.0;
+      } else if (check == -1) h *= 2.0;
 
     } while (check == 1);
 
@@ -313,24 +255,24 @@ void raytrace(Real xobs, Real yobs, Real iobs,
 //check if the new position ends the integration
     if (Delta < 1.0e-3) {
       stop_integration = 4; // printf("photon crosses the horizon\n"); /* the
-                            // photon crosses the horizon */
+      // photon crosses the horizon */
       break;
     }
     if (r < 1.0) {
       stop_integration = 5; // printf("photon crosses the horizon\n"); /* the
-                            // photon crosses the horizon */
+      // photon crosses the horizon */
       break;
     }
 
     if (r != r) {
       stop_integration = 6; // printf("numerical problem\n");          /*
-                            // numerical problems! */
+      // numerical problems! */
       break;
     }
 
     if (r > 1.05 * dobs) {
       stop_integration = 7; // printf("photon escaped to infinity\n");   /* the
-                            // photon escapes to infinity */
+      // photon escapes to infinity */
       break;
     }
 #ifdef ITER_WARN
@@ -345,20 +287,10 @@ void raytrace(Real xobs, Real yobs, Real iobs,
       stop_integration = 255;
       break;
     }
-
-    //not at all close to disk so we don't need to perform the checks below
-    if(r > checkr) continue;
-
-    //check if the new position intersects the accretion disk
-    //convert coordinates of current and previous position via a BL-cartesian conversion
-    Real xcoord = std::sqrt(r * r + spin2) * std::sin(th);
-    Real ycoord = r * std::cos(th);
-    Real xcoordprev = std::sqrt(rau * rau + spin2) * std::sin(thau);
-    Real ycoordprev = rau * std::cos(thau);
     int res = NO_INTERSECT;
-    int index = 0;
+    SurfacePoint spi;
+    Entity *hit_ent = env->checkIntersect(r, th, rau, thau, spi, res);
 
-    res = get_interpolated_sp(xcoordprev,ycoordprev,xcoord,ycoord,tree,spi,index);
     //deal with (possible) intersection
     if (res == INTERSECT) {
 #ifdef ITER_WARN
@@ -374,11 +306,56 @@ void raytrace(Real xobs, Real yobs, Real iobs,
         count++;
       }
       if (count > 0) {
-        if (std::abs(spi.y) > 0.0 && spi.x > 0.0) {
-          // next step is redshift calculation with data from the intersection
-          // point. we also need the interpolated 4-vel etc
-          stop_integration = index;
-          //break; /* the photon hits the disk */
+        int nres = hit_ent->checkIntersect(r, th, rau, thau, spi);
+        if (nres==INTERSECT) {
+          IntegratorData id; //oof
+          id.b = b;
+          id.carter = carter;
+          id.const1 = const1;
+          id.kr = kr;
+          id.kth = kth;
+          id.obsenergy = obsenergy;
+          id.r = r;
+          id.rprev = rau;
+          id.th = th;
+          id.thprev = thau;
+          stop_integration = hit_ent->intersect(id, spi, hit);
+          if (hit.gfactor < 0.0) {
+            std::cout << "gfactor is < 0.0, ignoring ray" << std::endl;
+            stop_integration = 6;
+            hit.r = r;
+            hit.gfactor = 1.0;
+            hit.cosem = 0.0;
+          }
+          if(std::isnan(hit.gfactor)) {
+            std::cout << "gfactor is nan, ignoring ray" << std::endl;
+            stop_integration = 6;
+            hit.r = r;
+            hit.gfactor = 1.0;
+            hit.cosem = 0.0;
+          }
+#ifdef DEBUG_COSEM
+          if (std::isnan(hit.cosem)) {
+            std::cout << "Cosem is nan, ignoring ray" << std::endl;
+            stop_integration = 6;
+            hit.r = r;
+            hit.gfactor = 1.0;
+            hit.cosem = 0.0;
+          }
+          if (hit.cosem > 1.05) {
+            std::cout << "Cosem > 1.05 detected, ignoring ray: " << hit.cosem
+                << std::endl;
+            stop_integration = 6;
+            hit.r = r;
+            hit.gfactor = 1.0;
+            hit.cosem = 0.0;
+          }
+          if (hit.cosem > 1.0) {
+            std::cout << "1.05 >= Cosem > 1.0 detected, clamping to 1.0: "
+                << hit.cosem << std::endl;
+            hit.cosem = 1.0;
+          }
+#endif
         } else {
           check2 = 0;
           count = 0;
@@ -388,7 +365,6 @@ void raytrace(Real xobs, Real yobs, Real iobs,
           // is ejected to infinity
           //stop_integration = 2; /* the photon misses the disk */
         }
-
       } else {
         r = rau;
         th = thau;
@@ -404,126 +380,11 @@ void raytrace(Real xobs, Real yobs, Real iobs,
       }
     }
   } while (stop_integration == 0);
-
-  if (stop_integration >= 128 && stop_integration <= 131) {
-    xem[1] = r;
-
-    //to calculate the redshift, we need the photon momentum k (which is present with kr and kth, kt=-E=kt0, kphi=L=kphi0) the observer 4-vel,
-    //which is (1,0,0,0), and the interpolated 4-vel of the disk. With this, we can calculate the gfactor.
-    metric(r, th, met);
-
-
-    //Real x = std::std::sqrt(r);
-    //Real p_ut = (0.0 + CUBE(x))/std::std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
-    //Real p_uph = 1/std::std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
-    //Real uarray[4] = {p_ut,0.0,0.0,p_uph};
-    //Real uarray[4] = {1,0,0,0};
-    Real uarray[4] = {spi.u0, spi.u1, spi.u2, spi.u3};
-    //to fix any inconsistencies introduced by linear interpolation or the change of coordinate chart (KS->BL)
-    //or code differences between Athena++ and Blackray or simply numerical issues in the entire pipeline
-    //the fix is done by recalculating (only) the time component of the 4-velocity so that the normalization is correct, i.e. far closer to -1.
-    //the highest delta |spi.u0-fixedu0| is approximately 0.05 for an average disk.
-    Real norm;
-    scalarProduct(met, uarray, uarray, norm);
-    correct4VelNorm(met, norm, uarray);
-    Real newnorm;
-    scalarProduct(met, uarray, uarray, newnorm);
-#ifdef DEBUG_FVEL_NORM
-    if(norm > -0.97 || norm < -1.03) {
-      std::cout << "4-Vel norm deviates significantly, ignoring ray" << std::endl;
-      std::cout << "Old norm: " << norm << std::endl;
-      std::cout << "Fixed norm: " << newnorm << std::endl;
-      std::cout << "Delta components: " << spi.u0-uarray[0] << " " << spi.u1-uarray[1] << " " << spi.u2-uarray[2] << " " << spi.u3-uarray[3] << " " << std::endl;
-      stop_integration = 6;
-    }
-#endif
-    //if we can't fix this mess, invalidate ray
-    if(newnorm > -0.95 || newnorm < -1.05) {
-      std::cout << "even fixed 4-vel norm deviates significantly, ignoring ray" << std::endl;
-      stop_integration = 6;
-      cosem = 0.0;
-      gfactor = 1.0;
-      xem[1] = r;
-    }else{
-
-
-      Real g_tt, g_pp, g_tp;
-      g_tt = met[0][0];
-      g_pp = met[3][3];
-      g_tp = met[0][3];
-      Real denom = (g_tt * g_pp - g_tp * g_tp);
-      Real ktcalc = -(g_pp + b * g_tp) / denom;
-      Real kphicalc = (g_tp + b * g_tt) / denom;
-      Real karray[4] = {ktcalc, kr, kth, kphicalc};
-
-  #ifdef DEBUG_FMOM_NORM
-      Real knorm;
-      scalarProduct(met, karray, karray, knorm);
-      if(knorm > 0.03 || knorm < -0.03) {
-        std::cout << "4-Momentum norm deviates significantly" << std::endl;
-        std::cout << "Norm: " << knorm << std::endl;
-        stop_integration = 6;
-      }
-  #endif
-
-      Real emenergy;
-      scalarProduct(met, uarray, karray, emenergy);
-      gfactor = obsenergy/emenergy;
-
-      //cosem stays artifical
-      Real gfactorforcosem;
-      redshift(xem[1],const1,gfactorforcosem);
-      /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
-      cosem = carter * gfactorforcosem / std::sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
-      //Workaround for redshift function giving nan...
-      if(std::isnan(cosem)) {
-        cosem = carter * gfactor / std::sqrt(xem[1] * xem[1] + epsi3 / xem[1]);
-        if(cosem > 1.05){
-          std::cout << "Cosem was nan, then fixed cosem was > 1.05, ignoring ray: " << cosem << std::endl;
-          stop_integration = 6;
-          xem[1] = r;
-          gfactor = 1.0;
-          cosem = 0.0;
-        } else if(cosem > 1.0) {
-          cosem = 1.0;
-        }
-      }
-    }
-  } else {
-    xem[1] = r;
-    gfactor = 1.0;
-    cosem = 0.0;
+  if (stop_integration != 512
+      && (stop_integration < 128 || stop_integration > 131)) {
+    hit.r = r;
+    hit.gfactor = 1.0;
+    hit.cosem = 0.0;
   }
-  if(gfactor < 0.0){
-    std::cout << "gfactor is < 0.0, ignoring ray" << std::endl;
-    stop_integration = 6;
-    xem[1] = r;
-    gfactor = 1.0;
-    cosem = 0.0;
-  }
-#ifdef DEBUG_COSEM
-  if(std::isnan(cosem)) {
-    std::cout << "Cosem is nan, ignoring ray" << std::endl;
-    stop_integration = 6;
-    xem[1] = r;
-    gfactor = 1.0;
-    cosem = 0.0;
-  }
-  if(cosem > 1.05) {
-    std::cout << "Cosem > 1.05 detected, ignoring ray: " << cosem << std::endl;
-    stop_integration = 6;
-    xem[1] = r;
-    gfactor = 1.0;
-    cosem = 0.0;
-  }
-  if(cosem > 1.0) {
-    std::cout << "1.05 >= Cosem > 1.0 detected, clamping to 1.0: " << cosem << std::endl;
-    cosem = 1.0;
-  }
-#endif
-  hit.cosem = cosem;
-  hit.r = xem[1];
-  hit.gfactor = gfactor;
-  hit.hc = 0.0;
 
 }
