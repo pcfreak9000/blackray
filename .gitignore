@@ -6,3 +6,6 @@ src/.cproject
 src/.project
 src/.settings/
 ironline_data/
+.cproject
+.project
+.settings
