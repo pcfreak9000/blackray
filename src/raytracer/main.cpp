@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   if(maxr_xdir > maxr_ydir) checkr = maxr_xdir;
   find_isco(15.0, isco); /* Depends upon the properties of BH */
   GRMHDDisk disk(tree, checkr);
-  ThinDisk thin(isco, 9);
+  ThinDisk thin(isco, 100);
   PlungingRegion plunge(isco);
   Env env;
   env.addEntity(&thin);
@@ -99,12 +99,12 @@ int main(int argc, char *argv[]) {
 
   /*** thin disk parameters  ***/
   xin = isco; /* inner radius of the accretion disk; set isco */
-  xout = 10; /* outer radius of the accretion disk */
+  xout = 200; /* outer radius of the accretion disk */
 
   /* ----- Set computational parameters ----- */
 
-  robs_i = 1;
-  robs_f = 12;
+  robs_i = 0.1;//this was 1, but that is too big and will yield artifacts
+  robs_f = 215;
 
   // rstep  = 1.008;
   rstep2 = (rstep - 1) / rstep;

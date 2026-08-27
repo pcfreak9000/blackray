@@ -251,7 +251,7 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
     phi = vars_4th[2];
     kr = vars_4th[3];
     kth = vars_4th[4];
-    Delta = r * r - 2.0 * r + spin2;
+    Delta = SQR(r) - 2.0 * r + spin2;
 //check if the new position ends the integration
     if (Delta < 1.0e-3) {
       stop_integration = 4; // printf("photon crosses the horizon\n"); /* the
