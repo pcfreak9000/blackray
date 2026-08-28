@@ -16,8 +16,7 @@ void scalarProduct(Real met[4][4], Real *fvec0, Real *fvec1, Real &scal);
 //void correct4VelNorm(Real met[4][4], Real norm, Real *fvel);
 
 void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
-    Real disk_length_combined, RayHit &hit, int &stop_integration,
-    Env* env) {
+    Real disk_length_combined, RayHit &hit, int &stop_integration, Env *env) {
   Real dobs;
   Real xobs2, yobs2;
   Real hstart;
@@ -41,15 +40,15 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
       k3[5], k4[5], k5[5], k6[5];
   //Real xem[4];
   //Real gfactor;
-  Real err, errmin, errmax;
+  Real err;
 
-  int check, check2 = 0;
+  bool freeze_h = false;
   int i;
 
   /* ----- Set computational parameters ----- */
   dobs = 1.0e+8; /* distance of the observer */
-  errmin = 1.0e-8;
-  errmax = 1.0e-6;
+  constexpr Real errmin = 1.0e-8;
+  constexpr Real errmax = 1.0e-6;
   //atol = 1.0e-10;
   //rtol = 1.0e-10;
   //rtol = 1.0e3;
@@ -162,7 +161,7 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
     vars[4] = kth;
 //evolve the system one step such that the error stays below certain limits. For this, adaptively increase or decrease step size
     do {
-      check = 0;
+      int check = 0;
 
       /* ----- compute RK1 ----- */
 
@@ -223,8 +222,8 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
         err = fabs(
             (vars_4th[i] - vars_5th[i]) / std::max(vars_4th[i], vars[i]));
 
-        if (err > errmax && check2 == 0) check = 1;
-        else if (err < errmin && check != 1 && check2 == 0) check = -1;
+        if (err > errmax && !freeze_h) check = 1;
+        else if (err < errmin && check != 1 && !freeze_h) check = -1;
       }
 
       if (check == 1) {
@@ -234,9 +233,12 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
           std::cout << "descale0" << std::endl;
         }
 #endif
-      } else if (check == -1) h *= 2.0;
+      } else {
+        if (check == -1) h *= 2.0;
+        break;
+      }
 
-    } while (check == 1);
+    } while (true);
 
     /* ----- solutions to the fourth-order RKN method ----- */
 //apply the new step to the variables
@@ -298,16 +300,16 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
         std::cout << "int" << std::endl;
       }
 #endif
-      if (check2 != 1) {
+      if (!freeze_h) {
         prevh = h;
       }
-      check2 = 1; //don't adapt stepsize anymore, this is now done manually to reach certain tolerances
+      freeze_h = true; //don't adapt stepsize anymore, this is now done manually to reach certain tolerances
       if (std::fabs(th - thau) <= thtol) {
         count++;
       }
       if (count > 0) {
         int nres = hit_ent->checkIntersect(r, th, rau, thau, spi);
-        if (nres==INTERSECT) {
+        if (nres == INTERSECT) {
           IntegratorData id; //oof
           id.b = b;
           id.carter = carter;
@@ -327,7 +329,7 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
             hit.gfactor = 1.0;
             hit.cosem = 0.0;
           }
-          if(std::isnan(hit.gfactor)) {
+          if (std::isnan(hit.gfactor)) {
             std::cout << "gfactor is nan, ignoring ray" << std::endl;
             stop_integration = 6;
             hit.r = r;
@@ -357,7 +359,7 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
           }
 #endif
         } else {
-          check2 = 0;
+          freeze_h = false;
           count = 0;
           h = prevh;
           // this is a simplification, we can only be sure about the final
@@ -381,7 +383,8 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
     }
   } while (stop_integration == 0);
   if (stop_integration != 512
-      && (stop_integration < 128 || stop_integration > 131) && stop_integration != 600) {
+      && (stop_integration < 128 || stop_integration > 131)
+      && stop_integration != 600) {
     hit.r = r;
     hit.gfactor = 1.0;
     hit.cosem = 0.0;

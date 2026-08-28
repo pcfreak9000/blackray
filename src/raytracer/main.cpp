@@ -205,16 +205,6 @@ int main(int argc, char *argv[]) {
 
               }
             }
-
-//          for (i = 0; i <= imax - 2; i++) {
-//            if (E_obs[i] <= pp && E_obs[i + 1] > pp) {
-//              qq = gfactor * gfactor * gfactor * gfactor;
-//              qq = qq * std::pow(hit.r, alpha);
-//
-//              fphi[i] = fphi[i] + qq;
-//              break;
-//            }
-//          }
           } else {
             if ((!RESTRICT_DEBUGFILE_CRIT && raycount % DEBUGFILE_OUT_DIV == 0)
                 || (stop_integration_condition == 255
