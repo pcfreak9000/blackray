@@ -17,7 +17,7 @@
 #define RESTRICT_DEBUGFILE_CRIT 0
 #define DEBUGFILE_OUT_DIV 1
 
-#define imax 400
+#define IMAX 400
 
 #define THIN
 

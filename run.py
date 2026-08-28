@@ -32,7 +32,7 @@ def main(**kwargs):
 
     Nr = 1000 #1000
     Nph = 400 #400
-    Rmax = 200
+    Rmax = 10
     rstep  = np.e**((np.log(Rmax)-np.log(np.abs(np.cos(np.pi*incl/180))))/Nr);
     pstep  = 2*np.pi/Nph;
     print("rstep: "+str(rstep))
