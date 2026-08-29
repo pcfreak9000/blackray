@@ -22,8 +22,7 @@
 #define THIN
 
 using Real = long double;
-#define NO_INTERSECT -1
-#define INTERSECT 0
+
 #define SQR(x) ((x)*(x))
 #define CUBE(x) ((x)*(x)*(x))
 

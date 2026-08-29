@@ -12,7 +12,7 @@ Real interpolate(Real a, Real b, Real f) {
 //this might interpolate between a mesh cell right beyond the horizon, which might contain invalid data, and the first cell outside the horizon,
 //for disk shapes which come very close to the horizon
 //at the moment, this does not seem to be a problem, but keep this in mind, especially if and when doing a clean rewrite of this
-int get_interpolated_sp(const Real x1, const Real y1, const Real x2,
+bool get_interpolated_sp(const Real x1, const Real y1, const Real x2,
     const Real y2, QuadTree *quadtree, SurfacePoint &out) {
   SurfaceElement *elem;
   Real result = quadtree->check_intersect(x1, y1, x2, y2, &elem);
@@ -28,19 +28,19 @@ int get_interpolated_sp(const Real x1, const Real y1, const Real x2,
     out.u1 = interpolate(elem->sp0->u1, elem->sp1->u1, result);
     out.u2 = interpolate(elem->sp0->u2, elem->sp1->u2, result);
     out.u3 = interpolate(elem->sp0->u3, elem->sp1->u3, result);
-    return INTERSECT;
+    return true;
   }
-  return NO_INTERSECT;
+  return false;
 }
 
 GRMHDDisk::GRMHDDisk(QuadTree *tree, Real checkr) :
     tree(tree), checkr(checkr) {
 }
 
-int GRMHDDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
+bool GRMHDDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
     const Real &thprev, SurfacePoint &outSurface) {
   //not at all close to disk so we don't need to perform the checks below
-  if (r > checkr) return NO_INTERSECT;
+  if (r > checkr) return false;
   //check if the new position intersects the accretion disk
   //convert coordinates of current and previous position via a BL-cartesian conversion
   Real spin2 = SQR(spin);
@@ -48,10 +48,10 @@ int GRMHDDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
   Real ycoord = r * std::cos(th);
   Real xcoordprev = std::sqrt(rprev * rprev + spin2) * std::sin(thprev);
   Real ycoordprev = rprev * std::cos(thprev);
-  int res = NO_INTERSECT;
-  res = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord, tree,
+
+  bool res = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord, tree,
       outSurface);
-  if (std::abs(outSurface.y) <= 0.0 || outSurface.x <= 0.0) return NO_INTERSECT;
+  if (std::abs(outSurface.y) <= 0.0 || outSurface.x <= 0.0) return false;
   return res;
 }
 
@@ -178,15 +178,15 @@ ThinDisk::ThinDisk(Real innerr, Real outerr) :
     innerr(innerr), outerr(outerr) {
 }
 
-int ThinDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
+bool ThinDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
     const Real &thprev, SurfacePoint &outSurface) {
-  if (r > outerr && rprev > outerr) return NO_INTERSECT;
-  if (r <= innerr && rprev <= innerr) return NO_INTERSECT;
+  if (r > outerr && rprev > outerr) return false;
+  if (r <= innerr && rprev <= innerr) return false;
   if ((th > Pi / 2.0 && thprev < Pi / 2.0)
       || (th < Pi / 2.0 && thprev > Pi / 2.0)) {
-    return INTERSECT;
+    return true;
   }
-  return NO_INTERSECT;
+  return false;
 }
 
 int ThinDisk::intersect(const IntegratorData &id,
@@ -201,14 +201,14 @@ PlungingRegion::PlungingRegion(Real isco) :
     isco(isco) {
 }
 
-int PlungingRegion::checkIntersect(const Real &r, const Real &th,
+bool PlungingRegion::checkIntersect(const Real &r, const Real &th,
     const Real &rprev, const Real &thprev, SurfacePoint &outSurface) {
-  if (r > isco && rprev > isco) return NO_INTERSECT;
+  if (r > isco && rprev > isco) return false;
   if ((th > Pi / 2.0 && thprev < Pi / 2.0)
       || (th < Pi / 2.0 && thprev > Pi / 2.0)) {
-    return INTERSECT;
+    return true;
   }
-  return NO_INTERSECT;
+  return false;
 }
 int PlungingRegion::intersect(const IntegratorData &id,
     const SurfacePoint &surfacepoint, RayHit &hit) {
@@ -232,14 +232,14 @@ int PlungingRegion::intersect(const IntegratorData &id,
 void Env::addEntity(Entity *entity) {
   this->ents.push_back(entity);
 }
-Entity* Env::checkIntersect(const Real &r, const Real &th, const Real &rprev,
-    const Real &thprev, SurfacePoint &outsurf, int &res) {
+bool Env::checkIntersect(const Real &r, const Real &th, const Real &rprev,
+    const Real &thprev, SurfacePoint &outsurf, Entity*& hitent) {
   for (Entity *ent : this->ents) {
-    if (ent->checkIntersect(r, th, rprev, thprev, outsurf) == INTERSECT) {
-      res = INTERSECT;
-      return ent;
+    if (ent->checkIntersect(r, th, rprev, thprev, outsurf)) {
+      hitent = ent;
+      return true;
     }
   }
-  res = NO_INTERSECT;
-  return nullptr;
+  hitent = nullptr;
+  return false;
 }

@@ -47,17 +47,26 @@ static constexpr Real errmax = 1.0e-6;
 
 static constexpr Real dobs = 1.0e+8; /* distance of the observer */
 
-void adaptiveRK45(Real b, Real *vars, Real &h, const bool &freeze_h) {
+union PhaseVec {
+  Real vars[5];
+  struct {
+    Real r, th, phi;
+    Real kr, kth;
+  };
+};
+
+template<size_t N>
+void adaptiveRK45(Real b, Real vars[N], Real &h, const bool &freeze_h) {
   //evolve the system one step such that the error stays below certain limits. For this, adaptively increase or decrease step size
-  Real diffs[5], vars_5th[5], vars_4th[5], vars_temp[5], k1[5], k2[5], k3[5],
-      k4[5], k5[5]; //, k6[5];
+  Real diffs[N], vars_4th[N], vars_temp[N], k1[N], k2[N], k3[N], k4[N], k5[N]; //, k6[5];
   do {
     int check = 0;
 
     /* ----- compute RK1 ----- */
     //maybe this diffeqs only needs computation once and not everytime to adjust h?
     diffeqs(b, vars, diffs);
-    for (int i = 0; i <= 4; i++) {
+#pragma omp simd
+    for (int i = 0; i < N; i++) {
       k1[i] = h * diffs[i];
       vars_temp[i] = vars[i] + a1 * k1[i];
     }
@@ -65,7 +74,8 @@ void adaptiveRK45(Real b, Real *vars, Real &h, const bool &freeze_h) {
     /* ----- compute RK2 ----- */
 
     diffeqs(b, vars_temp, diffs);
-    for (int i = 0; i <= 4; i++) {
+#pragma omp simd
+    for (int i = 0; i < N; i++) {
       k2[i] = h * diffs[i];
       vars_temp[i] = vars[i] + b1 * k1[i] + b2 * k2[i];
     }
@@ -73,7 +83,8 @@ void adaptiveRK45(Real b, Real *vars, Real &h, const bool &freeze_h) {
     /* ----- compute RK3 ----- */
 
     diffeqs(b, vars_temp, diffs);
-    for (int i = 0; i <= 4; i++) {
+#pragma omp simd
+    for (int i = 0; i < N; i++) {
       k3[i] = h * diffs[i];
       vars_temp[i] = vars[i] + c1 * k1[i] + c2 * k2[i] + c3 * k3[i];
     }
@@ -81,7 +92,8 @@ void adaptiveRK45(Real b, Real *vars, Real &h, const bool &freeze_h) {
     /* ----- compute RK4 ----- */
 
     diffeqs(b, vars_temp, diffs);
-    for (int i = 0; i <= 4; i++) {
+#pragma omp simd
+    for (int i = 0; i < N; i++) {
       k4[i] = h * diffs[i];
       vars_temp[i] = vars[i] + d1 * k1[i] + d2 * k2[i] + d3 * k3[i]
           + d4 * k4[i];
@@ -90,7 +102,8 @@ void adaptiveRK45(Real b, Real *vars, Real &h, const bool &freeze_h) {
     /* ----- compute RK5 ----- */
 
     diffeqs(b, vars_temp, diffs);
-    for (int i = 0; i <= 4; i++) {
+#pragma omp simd
+    for (int i = 0; i < N; i++) {
       k5[i] = h * diffs[i];
       vars_temp[i] = vars[i] + e1 * k1[i] + e2 * k2[i] + e3 * k3[i] + e4 * k4[i]
           + e5 * k5[i];
@@ -105,14 +118,15 @@ void adaptiveRK45(Real b, Real *vars, Real &h, const bool &freeze_h) {
 
     /* ----- local error ----- */
 
-    for (int i = 0; i <= 4; i++) {
+    for (int i = 0; i < N; i++) {
       vars_4th[i] = vars[i] + f1 * k1[i] + f2 * k2[i] + f3 * k3[i] + f4 * k4[i]
           + f5 * k5[i];
-      vars_5th[i] = vars[i] + g1 * k1[i] + g2 * k2[i] + g3 * k3[i] + g4 * k4[i]
+      //vars_5th[i] =
+      Real varfith = vars[i] + g1 * k1[i] + g2 * k2[i] + g3 * k3[i] + g4 * k4[i]
           + g5 * k5[i] + g6 * diffs[i] * h; //k6[i];
 
       Real err = std::fabs(
-          (vars_4th[i] - vars_5th[i]) / std::max(vars_4th[i], vars[i]));
+          (vars_4th[i] - varfith) / std::max(vars_4th[i], vars[i]));
 
       if (err > errmax && !freeze_h) check = 1;
       else if (err < errmin && check != 1 && !freeze_h) check = -1;
@@ -120,15 +134,10 @@ void adaptiveRK45(Real b, Real *vars, Real &h, const bool &freeze_h) {
 
     if (check == 1) {
       h /= 2.0;
-#ifdef ITER_WARN
-          if (iter > MAX_ITER - 10) {
-            std::cout << "descale0" << std::endl;
-          }
-  #endif
     } else {
       if (check == -1) h *= 2.0;
       //apply the new step to the variables
-      for (size_t i = 0; i < 5; i++) {
+      for (size_t i = 0; i < N; i++) {
         vars[i] = vars_4th[i];
       }
       break;
@@ -137,40 +146,78 @@ void adaptiveRK45(Real b, Real *vars, Real &h, const bool &freeze_h) {
   } while (true);
 }
 
-bool triviallyEnd(Real r, int &stop_integration) {
+bool triviallyEnd(const PhaseVec &pvec, const int &iter,
+    int &stop_integration) {
   //check if the new position ends the integration
-  Real Delta = SQR(r) - 2.0 * r + SQR(spin);
+  Real Delta = SQR(pvec.r) - 2.0 * pvec.r + SQR(spin);
   if (Delta < 1.0e-3) {
     stop_integration = 4; // printf("photon crosses the horizon\n"); /* the
     // photon crosses the horizon */
     return true;
   }
-  if (r < 1.0) {
+  if (pvec.r < 1.0) {
     stop_integration = 5; // printf("photon crosses the horizon\n"); /* the
     // photon crosses the horizon */
     return true;
   }
 
-  if (r != r) {
+  if (std::isnan(pvec.r)) {
     stop_integration = 6; // printf("numerical problem\n");          /*
     // numerical problems! */
     return true;
   }
 
-  if (r > 1.05 * dobs) {
+  if (pvec.r > 1.05 * dobs) {
     stop_integration = 7; // printf("photon escaped to infinity\n");   /* the
     // photon escapes to infinity */
     return true;
   }
+  if (iter > MAX_ITER) {
+    stop_integration = 255;
+    return true;
+  }
   return false;
 }
-union PhaseVec {
-  Real vars[5];
-  struct {
-    Real r, th, phi;
-    Real kr, kth;
-  };
-};
+
+void handleNonsense(const PhaseVec &pvec, RayHit &hit, int &stop_integration) {
+  if (hit.gfactor < 0.0) {
+    std::cout << "gfactor is < 0.0, ignoring ray" << std::endl;
+    stop_integration = 6;
+    hit.r = pvec.r;
+    hit.gfactor = 1.0;
+    hit.cosem = 0.0;
+  }
+  if (std::isnan(hit.gfactor)) {
+    std::cout << "gfactor is nan, ignoring ray" << std::endl;
+    stop_integration = 6;
+    hit.r = pvec.r;
+    hit.gfactor = 1.0;
+    hit.cosem = 0.0;
+  }
+#ifdef DEBUG_COSEM
+  if (std::isnan(hit.cosem)) {
+    std::cout << "Cosem is nan, ignoring ray" << std::endl;
+    stop_integration = 6;
+    hit.r = pvec.r;
+    hit.gfactor = 1.0;
+    hit.cosem = 0.0;
+  }
+  if (hit.cosem > 1.05) {
+    std::cout << "Cosem > 1.05 detected, ignoring ray: " << hit.cosem
+        << std::endl;
+    stop_integration = 6;
+    hit.r = pvec.r;
+    hit.gfactor = 1.0;
+    hit.cosem = 0.0;
+  }
+  if (hit.cosem > 1.0) {
+    std::cout << "1.05 >= Cosem > 1.0 detected, clamping to 1.0: " << hit.cosem
+        << std::endl;
+    hit.cosem = 1.0;
+  }
+#endif
+}
+
 void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
     Real disk_length_combined, RayHit &hit, int &stop_integration, Env *env) {
   Real xobs2, yobs2;
@@ -195,7 +242,7 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
   //rtol = 1.0e-10;
   //rtol = 1.0e3;
   Real thtol = 1.0e-8;
-  int count, iter;
+  int iter;
 
   hstart = -1.0;
 
@@ -244,7 +291,7 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
   carter = std::sqrt(carter);
 
   /* ----- solve geodesic equations ----- */
-  PhaseVec pvec,pvecau;
+  PhaseVec pvec, pvecau;
   pvec.r = r0;
   pvec.th = th0;
   pvec.phi = phi0;
@@ -263,7 +310,6 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
   stop_integration = 0;
 
   h = hstart;
-  count = 0;
   iter = 0;
 
   Real prevh = -1.0;
@@ -272,112 +318,47 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
     iter++;
 
     pvecau = pvec;
-    adaptiveRK45(b, pvec.vars, h, freeze_h);
+    adaptiveRK45<5>(b, pvec.vars, h, freeze_h);
 
-    /* ----- solutions to the fourth-order RKN method ----- */
+    if (triviallyEnd(pvec, iter, stop_integration)) break;
 
-
-    if (triviallyEnd(pvec.r, stop_integration)) break;
-
-#ifdef ITER_WARN
-    if (iter > MAX_ITER - 10) {
-      std::cout << "Reaching max iter with..." << std::endl;
-      std::cout << h << " " << iter << std::endl;
-      std::cout << r << " " << th << " " << phi << std::endl;
-      std::cout << rau << " " << thau << " " << phiau << std::endl;
-    }
-#endif
-    if (iter > MAX_ITER) {
-      stop_integration = 255;
-      break;
-    }
-    int res = NO_INTERSECT;
     SurfacePoint spi;
-    Entity *hit_ent = env->checkIntersect(pvec.r, pvec.th, pvecau.r, pvecau.th, spi, res);
+    Entity *hit_ent = nullptr;
+    bool hitb = env->checkIntersect(pvec.r, pvec.th, pvecau.r, pvecau.th, spi,
+        hit_ent);
 
-    //deal with (possible) intersection
-    if (res == INTERSECT) {
-#ifdef ITER_WARN
-      if (iter > MAX_ITER - 10) {
-        std::cout << "int" << std::endl;
-      }
-#endif
+    if (hitb) {
+      //don't adapt stepsize anymore, this is now done manually to reach certain tolerances
       if (!freeze_h) {
         prevh = h;
+        freeze_h = true;
       }
-      freeze_h = true; //don't adapt stepsize anymore, this is now done manually to reach certain tolerances
-      if (std::fabs(pvec.th - pvecau.th) <= thtol) {
-        count++;
-      }
-      if (count > 0) {
-        int nres = hit_ent->checkIntersect(pvec.r, pvec.th, pvecau.r, pvecau.th, spi);
-        if (nres == INTERSECT) {
-          IntegratorData id; //oof
-          id.b = b;
-          id.carter = carter;
-          id.const1 = const1;
-          id.kr = pvec.kr;
-          id.kth = pvec.kth;
-          id.obsenergy = obsenergy;
-          id.r = pvec.r;
-          id.rprev = pvecau.r;
-          id.th = pvec.th;
-          id.thprev = pvecau.th;
-          stop_integration = hit_ent->intersect(id, spi, hit);
-          if (hit.gfactor < 0.0) {
-            std::cout << "gfactor is < 0.0, ignoring ray" << std::endl;
-            stop_integration = 6;
-            hit.r = pvec.r;
-            hit.gfactor = 1.0;
-            hit.cosem = 0.0;
-          }
-          if (std::isnan(hit.gfactor)) {
-            std::cout << "gfactor is nan, ignoring ray" << std::endl;
-            stop_integration = 6;
-            hit.r = pvec.r;
-            hit.gfactor = 1.0;
-            hit.cosem = 0.0;
-          }
-#ifdef DEBUG_COSEM
-          if (std::isnan(hit.cosem)) {
-            std::cout << "Cosem is nan, ignoring ray" << std::endl;
-            stop_integration = 6;
-            hit.r = pvec.r;
-            hit.gfactor = 1.0;
-            hit.cosem = 0.0;
-          }
-          if (hit.cosem > 1.05) {
-            std::cout << "Cosem > 1.05 detected, ignoring ray: " << hit.cosem
-                << std::endl;
-            stop_integration = 6;
-            hit.r = pvec.r;
-            hit.gfactor = 1.0;
-            hit.cosem = 0.0;
-          }
-          if (hit.cosem > 1.0) {
-            std::cout << "1.05 >= Cosem > 1.0 detected, clamping to 1.0: "
-                << hit.cosem << std::endl;
-            hit.cosem = 1.0;
-          }
-#endif
-        } else {
-          freeze_h = false;
-          count = 0;
-          h = prevh;
-          // this is a simplification, we can only be sure about the final
-          // whereabouts of the photon if it ends up beyond the event horizon ore
-          // is ejected to infinity
-          //stop_integration = 2; /* the photon misses the disk */
-        }
-      } else {
+      if (std::fabs(pvec.th - pvecau.th) > thtol) {
         pvec = pvecau;
         h /= 2.0;
-#ifdef ITER_WARN
-        if (iter > MAX_ITER - 10) {
-          std::cout << "descale1" << std::endl;
-        }
-#endif
+        continue;
       }
+      bool nres = hit_ent->checkIntersect(pvec.r, pvec.th, pvecau.r, pvecau.th,
+          spi);
+      if (!nres) {
+        freeze_h = false;
+        h = prevh;
+        continue;
+      }
+      IntegratorData id; //oof
+      id.b = b;
+      id.carter = carter;
+      id.const1 = const1;
+      id.kr = pvec.kr;
+      id.kth = pvec.kth;
+      id.obsenergy = obsenergy;
+      id.r = pvec.r;
+      id.rprev = pvecau.r;
+      id.th = pvec.th;
+      id.thprev = pvecau.th;
+      stop_integration = hit_ent->intersect(id, spi, hit);
+      handleNonsense(pvec, hit, stop_integration);
+
     }
   } while (stop_integration == 0);
   if (stop_integration != 512

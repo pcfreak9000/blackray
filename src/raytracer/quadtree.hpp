@@ -7,7 +7,7 @@
 #define Q2 1
 #define Q3 2
 #define Q4 3
-
+#define NO_INTERSECT -1
 class QuadTree {
 public:
   QuadTree(Real x, Real y, Real width, Real height);

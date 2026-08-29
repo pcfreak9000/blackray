@@ -5,7 +5,7 @@
 
 class Entity {
 public:
-  virtual int checkIntersect(const Real &r, const Real &th, const Real &rprev,
+  virtual bool checkIntersect(const Real &r, const Real &th, const Real &rprev,
       const Real &thprev, SurfacePoint &outSurface) = 0;
   virtual int intersect(const IntegratorData &id,
       const SurfacePoint &surfacepoint, RayHit &hit) = 0;
@@ -15,7 +15,7 @@ public:
 class GRMHDDisk : public Entity {
 public:
   GRMHDDisk(QuadTree *tree, Real checkr);
-  int checkIntersect(const Real &r, const Real &th, const Real &rprev,
+  bool checkIntersect(const Real &r, const Real &th, const Real &rprev,
       const Real &thprev, SurfacePoint &outSurface) override;
   int intersect(const IntegratorData &id, const SurfacePoint &surfacepoint,
       RayHit &hit) override;
@@ -27,7 +27,7 @@ private:
 class ThinDisk : public Entity {
 public:
   ThinDisk(Real inner, Real outer);
-  int checkIntersect(const Real &r, const Real &th, const Real &rprev,
+  bool checkIntersect(const Real &r, const Real &th, const Real &rprev,
       const Real &thprev, SurfacePoint &outSurface) override;
   int intersect(const IntegratorData &id, const SurfacePoint &surfacepoint,
       RayHit &hit) override;
@@ -39,7 +39,7 @@ private:
 class PlungingRegion : public Entity {
 public:
   PlungingRegion(Real isco);
-  int checkIntersect(const Real &r, const Real &th, const Real &rprev,
+  bool checkIntersect(const Real &r, const Real &th, const Real &rprev,
       const Real &thprev, SurfacePoint &outSurface) override;
   int intersect(const IntegratorData &id, const SurfacePoint &surfacepoint,
       RayHit &hit) override;
@@ -49,8 +49,8 @@ private:
 
 class Env {
 public:
-  Entity* checkIntersect(const Real &r, const Real &th, const Real &rprev,
-      const Real &thprev, SurfacePoint &outsurf, int &res);
+  bool checkIntersect(const Real &r, const Real &th, const Real &rprev,
+      const Real &thprev, SurfacePoint &outsurf, Entity*& hitent);
   void addEntity(Entity *entity);
 private:
   std::vector<Entity*> ents;
