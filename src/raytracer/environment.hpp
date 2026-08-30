@@ -9,7 +9,7 @@ public:
       const Real &thprev, SurfacePoint &outSurface) = 0;
   virtual int intersect(const IntegratorData &id,
       const SurfacePoint &surfacepoint, RayHit &hit) = 0;
-
+  virtual Real getMaxRadius() = 0;
 };
 
 class GRMHDDisk : public Entity {
@@ -19,6 +19,7 @@ public:
       const Real &thprev, SurfacePoint &outSurface) override;
   int intersect(const IntegratorData &id, const SurfacePoint &surfacepoint,
       RayHit &hit) override;
+  Real getMaxRadius() override;
 private:
   QuadTree *tree;
   Real checkr;
@@ -31,6 +32,7 @@ public:
       const Real &thprev, SurfacePoint &outSurface) override;
   int intersect(const IntegratorData &id, const SurfacePoint &surfacepoint,
       RayHit &hit) override;
+  Real getMaxRadius() override;
 private:
   Real innerr;
   Real outerr;
@@ -43,6 +45,7 @@ public:
       const Real &thprev, SurfacePoint &outSurface) override;
   int intersect(const IntegratorData &id, const SurfacePoint &surfacepoint,
       RayHit &hit) override;
+  Real getMaxRadius() override;
 private:
   Real isco;
 };
@@ -54,5 +57,6 @@ public:
   void addEntity(Entity *entity);
 private:
   std::vector<Entity*> ents;
+  Real maxr = 0;
 };
 

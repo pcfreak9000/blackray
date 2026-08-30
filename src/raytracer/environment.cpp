@@ -174,6 +174,10 @@ int GRMHDDisk::intersect(const IntegratorData &id,
   return surfacepoint.index;
 }
 
+Real GRMHDDisk::getMaxRadius(){
+  return checkr;
+}
+
 ThinDisk::ThinDisk(Real innerr, Real outerr) :
     innerr(innerr), outerr(outerr) {
 }
@@ -195,6 +199,10 @@ int ThinDisk::intersect(const IntegratorData &id,
   redshift(hit.r, id.const1, hit.gfactor);
   hit.cosem = id.carter * hit.gfactor / std::sqrt(SQR(hit.r) + epsi3 / hit.r);
   return 512;
+}
+
+Real ThinDisk::getMaxRadius() {
+  return outerr;
 }
 
 PlungingRegion::PlungingRegion(Real isco) :
@@ -228,12 +236,20 @@ int PlungingRegion::intersect(const IntegratorData &id,
   hit.cosem = id.carter * hit.gfactor / std::sqrt(SQR(hit.r) + epsi3 / hit.r);
   return 600;
 }
+Real PlungingRegion::getMaxRadius(){
+  return isco;
+}
 
 void Env::addEntity(Entity *entity) {
   this->ents.push_back(entity);
+  maxr = std::max(maxr, entity->getMaxRadius());
 }
 bool Env::checkIntersect(const Real &r, const Real &th, const Real &rprev,
     const Real &thprev, SurfacePoint &outsurf, Entity*& hitent) {
+  if(r > maxr){
+    hitent = nullptr;
+    return false;
+  }
   for (Entity *ent : this->ents) {
     if (ent->checkIntersect(r, th, rprev, thprev, outsurf)) {
       hitent = ent;
