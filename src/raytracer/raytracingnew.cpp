@@ -46,6 +46,10 @@ static constexpr Real errmin = 1.0e-8;
 static constexpr Real errmax = 1.0e-6;
 
 static constexpr Real dobs = 1.0e+8; /* distance of the observer */
+//atol = 1.0e-10;
+//rtol = 1.0e-10;
+//rtol = 1.0e3;
+static constexpr Real thtol = 1.0e-8;
 
 union PhaseVec {
   Real vars[5];
@@ -56,7 +60,7 @@ union PhaseVec {
 };
 
 template<size_t N>
-void adaptiveRK45(Real b, Real vars[N], Real &h, const bool &freeze_h) {
+void adaptiveRK45(const Real &b, Real vars[N], Real &h, const bool &freeze_h) {
   //evolve the system one step such that the error stays below certain limits. For this, adaptively increase or decrease step size
   Real diffs[N], vars_4th[N], vars_temp[N], k1[N], k2[N], k3[N], k4[N], k5[N]; //, k6[5];
   do {
@@ -66,7 +70,7 @@ void adaptiveRK45(Real b, Real vars[N], Real &h, const bool &freeze_h) {
     //maybe this diffeqs only needs computation once and not everytime to adjust h?
     diffeqs(b, vars, diffs);
 #pragma omp simd
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
       k1[i] = h * diffs[i];
       vars_temp[i] = vars[i] + a1 * k1[i];
     }
@@ -75,7 +79,7 @@ void adaptiveRK45(Real b, Real vars[N], Real &h, const bool &freeze_h) {
 
     diffeqs(b, vars_temp, diffs);
 #pragma omp simd
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
       k2[i] = h * diffs[i];
       vars_temp[i] = vars[i] + b1 * k1[i] + b2 * k2[i];
     }
@@ -84,7 +88,7 @@ void adaptiveRK45(Real b, Real vars[N], Real &h, const bool &freeze_h) {
 
     diffeqs(b, vars_temp, diffs);
 #pragma omp simd
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
       k3[i] = h * diffs[i];
       vars_temp[i] = vars[i] + c1 * k1[i] + c2 * k2[i] + c3 * k3[i];
     }
@@ -93,7 +97,7 @@ void adaptiveRK45(Real b, Real vars[N], Real &h, const bool &freeze_h) {
 
     diffeqs(b, vars_temp, diffs);
 #pragma omp simd
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
       k4[i] = h * diffs[i];
       vars_temp[i] = vars[i] + d1 * k1[i] + d2 * k2[i] + d3 * k3[i]
           + d4 * k4[i];
@@ -103,7 +107,7 @@ void adaptiveRK45(Real b, Real vars[N], Real &h, const bool &freeze_h) {
 
     diffeqs(b, vars_temp, diffs);
 #pragma omp simd
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
       k5[i] = h * diffs[i];
       vars_temp[i] = vars[i] + e1 * k1[i] + e2 * k2[i] + e3 * k3[i] + e4 * k4[i]
           + e5 * k5[i];
@@ -118,7 +122,7 @@ void adaptiveRK45(Real b, Real vars[N], Real &h, const bool &freeze_h) {
 
     /* ----- local error ----- */
 
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
       vars_4th[i] = vars[i] + f1 * k1[i] + f2 * k2[i] + f3 * k3[i] + f4 * k4[i]
           + f5 * k5[i];
       //vars_5th[i] =
@@ -145,7 +149,11 @@ void adaptiveRK45(Real b, Real vars[N], Real &h, const bool &freeze_h) {
 
   } while (true);
 }
-
+void invalidRay(const PhaseVec &pvec, RayHit& hit){
+  hit.r = pvec.r;
+  hit.gfactor = 1.0;
+  hit.cosem = 0.0;
+}
 bool triviallyEnd(const PhaseVec &pvec, const int &iter,
     int &stop_integration) {
   //check if the new position ends the integration
@@ -179,36 +187,30 @@ bool triviallyEnd(const PhaseVec &pvec, const int &iter,
   return false;
 }
 
+
+
 void handleNonsense(const PhaseVec &pvec, RayHit &hit, int &stop_integration) {
   if (hit.gfactor < 0.0) {
     std::cout << "gfactor is < 0.0, ignoring ray" << std::endl;
     stop_integration = 6;
-    hit.r = pvec.r;
-    hit.gfactor = 1.0;
-    hit.cosem = 0.0;
+    invalidRay(pvec, hit);
   }
   if (std::isnan(hit.gfactor)) {
     std::cout << "gfactor is nan, ignoring ray" << std::endl;
     stop_integration = 6;
-    hit.r = pvec.r;
-    hit.gfactor = 1.0;
-    hit.cosem = 0.0;
+    invalidRay(pvec, hit);
   }
 #ifdef DEBUG_COSEM
   if (std::isnan(hit.cosem)) {
     std::cout << "Cosem is nan, ignoring ray" << std::endl;
     stop_integration = 6;
-    hit.r = pvec.r;
-    hit.gfactor = 1.0;
-    hit.cosem = 0.0;
+    invalidRay(pvec, hit);
   }
   if (hit.cosem > 1.05) {
     std::cout << "Cosem > 1.05 detected, ignoring ray: " << hit.cosem
         << std::endl;
     stop_integration = 6;
-    hit.r = pvec.r;
-    hit.gfactor = 1.0;
-    hit.cosem = 0.0;
+    invalidRay(pvec, hit);
   }
   if (hit.cosem > 1.0) {
     std::cout << "1.05 >= Cosem > 1.0 detected, clamping to 1.0: " << hit.cosem
@@ -220,77 +222,53 @@ void handleNonsense(const PhaseVec &pvec, RayHit &hit, int &stop_integration) {
 
 void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
     Real disk_length_combined, RayHit &hit, int &stop_integration, Env *env) {
-  Real xobs2, yobs2;
-  Real hstart;
-  Real r0, th0, phi0;
-  Real kt0, kr0, kth0, kphi0;
-  Real r02, s0, s02;
-  Real fact1, fact2, fact3;
-  Real const1;
-  Real h;
-  Real spin2 = spin * spin;
-
-  Real carter, c02;
-
-  Real met[4][4];
-
-  bool freeze_h = false;
-
-  /* ----- Set computational parameters ----- */
-
-  //atol = 1.0e-10;
-  //rtol = 1.0e-10;
-  //rtol = 1.0e3;
-  Real thtol = 1.0e-8;
-  int iter;
-
-  hstart = -1.0;
-
   /* ----- compute photon initial conditions ----- */
-  xobs2 = xobs * xobs;
-  yobs2 = yobs * yobs;
+  const Real xobs2 = xobs * xobs;
+  const Real yobs2 = yobs * yobs;
 
-  fact1 = yobs * std::sin(iobs) + dobs * std::cos(iobs);
-  fact2 = dobs * std::sin(iobs) - yobs * std::cos(iobs);
+  const Real fact1 = yobs * std::sin(iobs) + dobs * std::cos(iobs);
+  const Real fact2 = dobs * std::sin(iobs) - yobs * std::cos(iobs);
 
-  r02 = xobs2 + yobs2 + dobs * dobs;
+  const Real r02 = xobs2 + yobs2 + dobs * dobs;
 
-  r0 = std::sqrt(r02);
-  th0 = std::acos(fact1 / r0);
-  phi0 = std::atan2(xobs, fact2);
+  const Real r0 = std::sqrt(r02);
+  const Real th0 = std::acos(fact1 / r0);
+  const Real phi0 = std::atan2(xobs, fact2);
 
-  s0 = std::sin(th0);
-  s02 = s0 * s0;
+  const Real s0 = std::sin(th0);
+  const Real s02 = s0 * s0;
 
-  kr0 = dobs / r0;
-  kth0 = -(std::cos(iobs) - dobs * fact1 / r02)
+  const Real kr0_unscl = dobs / r0;
+  const Real kth0_unscl = -(std::cos(iobs) - dobs * fact1 / r02)
       / std::sqrt(r02 - fact1 * fact1);
-  kphi0 = -xobs * std::sin(iobs) / (xobs2 + fact2 * fact2);
+  const Real kphi0 = -xobs * std::sin(iobs) / (xobs2 + fact2 * fact2);
 
+  Real met[4][4];//kind of a waste of space
   metric(r0, th0, met);
 
-  fact3 = std::sqrt(
+  const Real fact3 = std::sqrt(
       met[0][3] * met[0][3] * kphi0 * kphi0
           - met[0][0]
-              * (met[1][1] * kr0 * kr0 + met[2][2] * kth0 * kth0
+              * (met[1][1] * kr0_unscl * kr0_unscl + met[2][2] * kth0_unscl * kth0_unscl
                   + met[3][3] * kphi0 * kphi0));
 
-  kt0 = -(met[0][3] * kphi0 + fact3) / met[0][0];
+  const Real kt0 = -(met[0][3] * kphi0 + fact3) / met[0][0];
 
-  Real b = -(met[3][3] * kphi0 + met[0][3] * kt0)
+  const Real b = -(met[3][3] * kphi0 + met[0][3] * kt0)
       / (met[0][0] * kt0 + met[0][3] * kphi0);
 
-  kr0 /= fact3;
-  kth0 /= fact3;
+  const Real kr0 = kr0_unscl / fact3;
+  const Real kth0 = kth0_unscl / fact3;
 
-  /* ----- carter constant ----- */
+  /* ----- some more constants ----- */
 
-  c02 = 1. - s02;
+  const Real c02 = 1. - s02;
+  const Real carter = std::sqrt(yobs2 - SQR(spin) * c02 + xobs2 * c02);
+  //const0 = kt0;
+  const Real const1 = r02 * s02 * kphi0 / kt0;
 
-  carter = yobs2 - spin2 * c02 + xobs2 * c02;
-  carter = std::sqrt(carter);
+  /* ----- prepare solver ----- */
 
-  /* ----- solve geodesic equations ----- */
   PhaseVec pvec, pvecau;
   pvec.r = r0;
   pvec.th = th0;
@@ -299,9 +277,6 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
   pvec.kr = kr0;
   pvec.kth = kth0;
 
-  //const0 = kt0;
-  const1 = r02 * s02 * kphi0 / kt0;
-
   Real obsuarray[4] = { 1.0, 0.0, 0.0, 0.0 };
   Real obskarray[4] = { kt0, kr0, kth0, kphi0 };
   Real obsenergy;
@@ -309,18 +284,22 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
 
   stop_integration = 0;
 
-  h = hstart;
-  iter = 0;
-
+  Real h = -1.0;
   Real prevh = -1.0;
+  unsigned int iter = 0;
+  bool freeze_h = false;
 
+  /* ----- solve geodesic equations ----- */
   do {
     iter++;
 
     pvecau = pvec;
     adaptiveRK45<5>(b, pvec.vars, h, freeze_h);
 
-    if (triviallyEnd(pvec, iter, stop_integration)) break;
+    if (triviallyEnd(pvec, iter, stop_integration)){
+      invalidRay(pvec, hit);
+      break;
+    }
 
     SurfacePoint spi;
     Entity *hit_ent = nullptr;
@@ -358,15 +337,7 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
       id.thprev = pvecau.th;
       stop_integration = hit_ent->intersect(id, spi, hit);
       handleNonsense(pvec, hit, stop_integration);
-
     }
   } while (stop_integration == 0);
-  if (stop_integration != 512
-      && (stop_integration < 128 || stop_integration > 131)
-      && stop_integration != 600) {
-    hit.r = pvec.r;
-    hit.gfactor = 1.0;
-    hit.cosem = 0.0;
-  }
 
 }

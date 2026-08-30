@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
               if (index < IMAX) {
                 Real qq = gfactor * gfactor * gfactor * gfactor;
                 qq = qq * std::pow(hit.r, alpha);
-                fphi[index] = fphi[index] + qq;
+                fphi[index] += qq;
 
               }
             }
