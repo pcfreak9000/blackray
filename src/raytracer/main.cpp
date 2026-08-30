@@ -17,6 +17,39 @@ Real spin;
 Real iobs_deg;
 int phicount;
 
+struct Record {
+  int stop_integration_condition;
+  int photon_index;
+  Real xobs, yobs;
+  Real r;
+  Real gfactor;
+  Real cosem;
+  bool output;
+  int ray_index;
+};
+
+void write(FILE *foutput_coord, std::ofstream &tmpOutFile,
+    std::vector<Record> &recs) {
+
+  for (Record r : recs) {
+    if (r.output) {
+      fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", r.photon_index, r.xobs,
+          r.yobs, r.r, r.gfactor, r.cosem);
+      if (!RESTRICT_DEBUGFILE_CRIT && r.ray_index % DEBUGFILE_OUT_DIV == 0) {
+        tmpOutFile << r.xobs << " " << r.yobs << " " << r.gfactor << " "
+            << r.stop_integration_condition << " " << std::endl;
+      }
+    } else {
+      if ((!RESTRICT_DEBUGFILE_CRIT && r.ray_index % DEBUGFILE_OUT_DIV == 0)
+          || (r.stop_integration_condition == 255
+              || r.stop_integration_condition == 6)) {
+        tmpOutFile << r.xobs << " " << r.yobs << " " << 1.0 << " "
+            << r.stop_integration_condition << std::endl;
+      }
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
   std::cout << "Setting up raytracer..." << std::endl;
   if (DEBUG_DIV != 1.0) std::cout << "debug_div is non-one" << std::endl;
@@ -28,11 +61,9 @@ int main(int argc, char *argv[]) {
   Real xin, xout;
 
   Real isco;
-  Real gfactor;
 
   Real E_obs[IMAX];
   Real N_obs[IMAX];
-  Real fphi[IMAX];
 
   int photon_index = 0;
 
@@ -150,79 +181,77 @@ int main(int argc, char *argv[]) {
   }
   size_t robs_count = robs_vec.size();
   Real *robs_data = robs_vec.data();
-
+  std::vector<Record> records;
+  records.reserve(robs_count * pobs_count);
   /* ----- assign photon position in the grid ----- */
-  for (size_t robs_index = 0; robs_index < robs_count; robs_index++) {
+#pragma omp parallel for ordered schedule(dynamic)
+  for (size_t ray_index = 0; ray_index < robs_count * pobs_count; ray_index++) {
+    size_t robs_index = ray_index / pobs_count;
+    size_t pobs_index = ray_index % pobs_count;
+    if (ray_index % 10000 == 0) {
+      std::cout << "Progress: " << ray_index / (double) (robs_count * pobs_count)
+          << std::endl;
+    }
+
+    // for (size_t robs_index = 0; robs_index < robs_count; robs_index++) {
     Real robs = robs_data[robs_index];
     //for (robs = robs_i; robs < robs_f; robs = robs * rstep) {
-    std::cout << "Raytracing: " << (robs - robs_i) / (robs_f - robs_i)
-        << std::endl;
-    for (size_t i = 0; i < IMAX; i++)
-      fphi[i] = 0;
 
-#pragma omp parallel
-    {
-#pragma omp for ordered schedule(dynamic)
-      for (size_t pobs_index = 0; pobs_index < pobs_count; pobs_index++) {
-        Real pobs = pobs_data[pobs_index];
-        //for (Real pobs = 0; pobs < 2 * Pi - 0.5 * pstep; pobs = pobs + pstep) {
-        Real xobs, yobs;
-        xobs = robs * std::cos(pobs);
-        yobs = robs * std::sin(pobs);
-        /*entering in raytrace_new.cpp*/
-        // printf("entering in the raytrace part of the code\n");
-        int stop_integration_condition = 0;
-        RayHit hit;
-        raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition,
-            &env);
-#pragma omp ordered
-        {
-          raycount++;
-          if ((stop_integration_condition >= 128
-              && stop_integration_condition <= 131)
-              || stop_integration_condition == 512
-              || stop_integration_condition == 600) {
-            hitraycount++;
-            fprintf(foutput_coord, "%d %Lf %Lf %Lf %Lf %Lf\n", photon_index,
-                xobs, yobs, hit.r, hit.gfactor, hit.cosem);
+    //for (size_t pobs_index = 0; pobs_index < pobs_count; pobs_index++) {
+    Real pobs = pobs_data[pobs_index];
+    //for (Real pobs = 0; pobs < 2 * Pi - 0.5 * pstep; pobs = pobs + pstep) {
+    Real xobs = robs * std::cos(pobs);
+    Real yobs = robs * std::sin(pobs);
 
-            photon_index++;
+    int stop_integration_condition = 0;
+    RayHit hit;
+    raytrace(xobs, yobs, iobs, xin, xout, hit, stop_integration_condition,
+        &env);
+    bool yes_hit = (stop_integration_condition >= 128
+        && stop_integration_condition <= 131)
+        || stop_integration_condition == 512
+        || stop_integration_condition == 600;
+    Record rec;
+    rec.stop_integration_condition = stop_integration_condition;
+    rec.cosem = hit.cosem;
+    rec.gfactor = hit.gfactor;
+    rec.r = hit.r;
+    rec.xobs = xobs;
+    rec.yobs = yobs;
+    rec.output = yes_hit;
+    size_t index = 0;
+    Real N_obs_add = 0.0;
+    if (yes_hit) {
+      Real &gfactor = hit.gfactor;
 
-            gfactor = hit.gfactor;
-            if (!RESTRICT_DEBUGFILE_CRIT && raycount % DEBUGFILE_OUT_DIV == 0) {
-              tmpOutFile << xobs << " " << yobs << " " << gfactor << " "
-                  << stop_integration_condition << " " << std::endl;
-            }
-            /* --- integration - part 1 --- */
-            Real pp = gfactor * E_line;
-            Real bucket = (pp - E_obs[0]) / E_step;
-            if (bucket >= 0.0) {
-              size_t index = std::floor(bucket);
-              if (index < IMAX) {
-                Real qq = gfactor * gfactor * gfactor * gfactor;
-                qq = qq * std::pow(hit.r, alpha);
-                fphi[index] += qq;
-
-              }
-            }
-          } else {
-            if ((!RESTRICT_DEBUGFILE_CRIT && raycount % DEBUGFILE_OUT_DIV == 0)
-                || (stop_integration_condition == 255
-                    || stop_integration_condition == 6)) {
-              tmpOutFile << xobs << " " << yobs << " " << 1.0 << " "
-                  << stop_integration_condition << std::endl;
-            }
-          }
+      /* --- integration - part 1 --- */
+      Real pp = gfactor * E_line;
+      Real bucket = (pp - E_obs[0]) / E_step;
+      if (bucket >= 0.0) {
+        index = std::floor(bucket);
+        if (index < IMAX) {
+          Real qq = gfactor * gfactor * gfactor * gfactor;
+          qq = qq * std::pow(hit.r, alpha);
+          /* --- integration - part 2 --- */
+          N_obs_add = SQR(robs) * rstep2 * qq;
         }
       }
-      /* --- integration - part 2 --- */
-#pragma omp for
-      for (size_t i = 0; i < IMAX; i++) {
-        Real fr = SQR(robs) * fphi[i] * rstep2;
-        N_obs[i] += fr;
+    }
+#pragma omp ordered
+    {
+      rec.ray_index = raycount;
+      raycount++;
+      if (yes_hit) {
+        hitraycount++;
+        rec.photon_index = photon_index;
+        photon_index++;
+        N_obs[index] += N_obs_add;
       }
+      records.push_back(rec);
     }
   }
+
+  write(foutput_coord, tmpOutFile, records);
 
   N_tot = 0.0;
 #pragma omp parallel for reduction(+:N_tot)
@@ -230,7 +259,7 @@ int main(int argc, char *argv[]) {
     N_obs[i] = N_0 * N_obs[i] / E_obs[i];
     N_tot += N_obs[i];
   }
-
+  std::cout << N_tot << std::endl;
   std::cout << "Integrated " << raycount << " rays of which " << hitraycount
       << " hit the disk" << std::endl;
   std::cout << "Finishing..." << std::endl;
