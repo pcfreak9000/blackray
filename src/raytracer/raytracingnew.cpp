@@ -13,7 +13,6 @@
 
 //in environment.cpp, clean up
 void scalarProduct(Real met[4][4], Real *fvec0, Real *fvec1, Real &scal);
-//void correct4VelNorm(Real met[4][4], Real norm, Real *fvel);
 
 static constexpr Real a1 = 1.0 / 4.0;
 static constexpr Real b1 = 3.0 / 32.0;
@@ -60,7 +59,8 @@ union PhaseVec {
 };
 
 template<size_t N>
-void adaptiveRK45(const Real &b, Real vars[N], Real &h, const bool &freeze_h) {
+void adaptiveRK45(const Real &b, Real *const vars, Real &h,
+    const bool &freeze_h) {
   //evolve the system one step such that the error stays below certain limits. For this, adaptively increase or decrease step size
   Real diffs[N], vars_4th[N], vars_temp[N], k1[N], k2[N], k3[N], k4[N], k5[N]; //, k6[5];
   do {
@@ -149,12 +149,12 @@ void adaptiveRK45(const Real &b, Real vars[N], Real &h, const bool &freeze_h) {
 
   } while (true);
 }
-void invalidRay(const PhaseVec &pvec, RayHit& hit){
+inline void invalidRay(const PhaseVec &pvec, RayHit &hit) {
   hit.r = pvec.r;
   hit.gfactor = 1.0;
   hit.cosem = 0.0;
 }
-bool triviallyEnd(const PhaseVec &pvec, const int &iter,
+inline bool triviallyEnd(const PhaseVec &pvec, const int &iter,
     int &stop_integration) {
   //check if the new position ends the integration
   Real Delta = SQR(pvec.r) - 2.0 * pvec.r + SQR(spin);
@@ -187,9 +187,8 @@ bool triviallyEnd(const PhaseVec &pvec, const int &iter,
   return false;
 }
 
-
-
-void handleNonsense(const PhaseVec &pvec, RayHit &hit, int &stop_integration) {
+inline void handleNonsense(const PhaseVec &pvec, RayHit &hit,
+    int &stop_integration) {
   if (hit.gfactor < 0.0) {
     std::cout << "gfactor is < 0.0, ignoring ray" << std::endl;
     stop_integration = 6;
@@ -243,13 +242,14 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
       / std::sqrt(r02 - fact1 * fact1);
   const Real kphi0 = -xobs * std::sin(iobs) / (xobs2 + fact2 * fact2);
 
-  Real met[4][4];//kind of a waste of space
+  Real met[4][4];    //kind of a waste of space
   metric(r0, th0, met);
 
   const Real fact3 = std::sqrt(
       met[0][3] * met[0][3] * kphi0 * kphi0
           - met[0][0]
-              * (met[1][1] * kr0_unscl * kr0_unscl + met[2][2] * kth0_unscl * kth0_unscl
+              * (met[1][1] * kr0_unscl * kr0_unscl
+                  + met[2][2] * kth0_unscl * kth0_unscl
                   + met[3][3] * kphi0 * kphi0));
 
   const Real kt0 = -(met[0][3] * kphi0 + fact3) / met[0][0];
@@ -296,7 +296,7 @@ void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
     pvecau = pvec;
     adaptiveRK45<5>(b, pvec.vars, h, freeze_h);
 
-    if (triviallyEnd(pvec, iter, stop_integration)){
+    if (triviallyEnd(pvec, iter, stop_integration)) {
       invalidRay(pvec, hit);
       break;
     }

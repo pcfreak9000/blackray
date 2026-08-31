@@ -2,4 +2,4 @@
 
 #include "def.hpp"
 
-void diffeqs(Real b, Real vars[], Real diffs[]);
+void diffeqs(const Real& b, const Real *const vars, Real diffs[]);

@@ -1,19 +1,7 @@
 #include "diffeqs.hpp"
 #include <cmath>
 
-void diffeqs(Real b, Real vars[], Real diffs[]) {
-//  Real kt2, kr2, kth2, kp2, ktp, krth;
-//  Real ch_rtt, ch_rtp, ch_rrr, ch_rrth, ch_rthth, ch_rpp;
-//  Real ch_thtt, ch_thtp, ch_thrr, ch_thrth, ch_ththth, ch_thpp;
-//  Real g_tt, g_tp, g_pp, gurr, guthth;
-//  Real dgttdr, dgttdth, dgtpdr, dgtpdth, dgrrdr, dgrrdth, dgththdr,
-//      dgththdth, dgppdr, dgppdth;
-//  Real hgurr, hguthth;
-//  Real t8, t9, t10, t11, t12, t13, t14, t15,
-//      t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30,
-//      t31, t32, t33, t35, t36, t37, t38, t39, t40, t42, t43, t44, t45,
-//      t46, t47, t48;
-
+void diffeqs(const Real& b, const Real *const vars, Real diffs[]) {
   const Real& r = vars[0];
   const Real& th = vars[1];
 
