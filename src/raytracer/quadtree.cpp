@@ -2,12 +2,13 @@
 #include <cmath>
 #include <fstream>
 #include <sstream>
+#include <memory>
 
 #include "quadtree.hpp"
 
 
 
-QuadTree* readFileToTree(const char* diskdatafile, Real& maxxres, Real& maxyres) {
+std::unique_ptr<QuadTree> readFileToTree(const char* diskdatafile, Real& maxxres, Real& maxyres) {
   std::ifstream disk(diskdatafile);
   if (!disk) {
     std::cerr << "Error: Could not open file!" << std::endl;
@@ -48,7 +49,7 @@ QuadTree* readFileToTree(const char* diskdatafile, Real& maxxres, Real& maxyres)
   }
 
   disk.close();
-  QuadTree* treep = new QuadTree(minx-1,miny-1, maxx-minx+2, maxy-miny+2);
+  std::unique_ptr<QuadTree> treep = std::make_unique<QuadTree>(minx-1,miny-1, maxx-minx+2, maxy-miny+2);
   QuadTree& tree = *treep;
   for(size_t i=0; i<diskdata.size()-1; i++){
     SurfaceElement* elem = new SurfaceElement;
@@ -101,6 +102,18 @@ QuadTree::QuadTree(Real x, Real y, Real width, Real height) :
     x(x), y(y), width(width), height(height), max_elements(4), is_leaf(true),level(0) {
 }
 
+QuadTree::~QuadTree() {
+// for(QuadTree* p : subtrees) {
+//   delete p;
+// }
+// for(SurfaceElement* p : myelements) {
+//   //this is leaky but for now I dont care
+////   delete p->sp0;
+////   delete p->sp1;
+//   delete p;
+// }
+}
+
 Real QuadTree::check_intersect(Real x1, Real y1, Real x2, Real y2, SurfaceElement** out){
 
   if(!is_leaf) {
@@ -150,8 +163,8 @@ void QuadTree::validate(){
     if(!se->sp1) std::cout << level << " " << myelements.size() << " oh no 1: " << se->sp1 << std::endl;
   }
   if(!is_leaf){
-    for(QuadTree* qt : subtrees){
-      qt->validate();
+    for(size_t i=0; i<4; i++){
+      subtrees[i]->validate();
     }
   }
 }
@@ -184,19 +197,14 @@ bool QuadTree::fully_inside(Real x0, Real y0, Real x1, Real y1) {
 void QuadTree::subdivide() {
   Real w_2 = width/2.0;
   Real h_2 = height/2.0;
-  QuadTree* q1 = new QuadTree(x+w_2, y+h_2, w_2, h_2);
-  QuadTree* q2 = new QuadTree(x,     y+h_2, w_2, h_2);
-  QuadTree* q3 = new QuadTree(x,     y,     w_2, h_2);
-  QuadTree* q4 = new QuadTree(x+w_2, y,     w_2, h_2);
-  q1->level = this->level+1;
-  q2->level = this->level+1;
-  q3->level = this->level+1;
-  q4->level = this->level+1;
+  subtrees[0] = std::make_unique<QuadTree>(x+w_2, y+h_2, w_2, h_2);
+  subtrees[1] = std::make_unique<QuadTree>(x,     y+h_2, w_2, h_2);
+  subtrees[2] = std::make_unique<QuadTree>(x,     y,     w_2, h_2);
+  subtrees[3] = std::make_unique<QuadTree>(x+w_2, y,     w_2, h_2);
+  for(size_t i=0; i<4; i++) {
+    subtrees[i]->level = this->level+1;
+  }
   is_leaf = false;
-  subtrees.push_back(q1);
-  subtrees.push_back(q2);
-  subtrees.push_back(q3);
-  subtrees.push_back(q4);
   for(auto vecit = myelements.begin(); vecit != myelements.end(); vecit++){
     SurfaceElement* se = *vecit;
     for(size_t i=0; i<4; i++){

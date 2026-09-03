@@ -1,7 +1,10 @@
 #pragma once
 
-#include "def.hpp"
 #include <vector>
+#include <memory>
+
+#include "def.hpp"
+
 
 #define Q1 0
 #define Q2 1
@@ -11,13 +14,14 @@
 class QuadTree {
 public:
   QuadTree(Real x, Real y, Real width, Real height);
+  ~QuadTree();
   Real check_intersect(Real x1, Real y1, Real x2, Real y2,
       SurfaceElement ** intersect);
   void put_element(SurfaceElement *element);
   void validate();
   size_t size();
 private:
-  std::vector<QuadTree*> subtrees;
+  std::unique_ptr<QuadTree> subtrees[4];
   std::vector<SurfaceElement*> myelements;
   Real x, y, width, height;
   size_t max_elements;
@@ -31,4 +35,4 @@ private:
   bool fully_inside(Real x0, Real y0, Real x1, Real y1);
 };
 
-QuadTree* readFileToTree(const char* diskdatafile, Real& maxxres, Real& maxyres);
+std::unique_ptr<QuadTree> readFileToTree(const char* diskdatafile, Real& maxxres, Real& maxyres);

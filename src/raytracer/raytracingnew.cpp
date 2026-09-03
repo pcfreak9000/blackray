@@ -219,8 +219,7 @@ inline void handleNonsense(const PhaseVec &pvec, RayHit &hit,
 #endif
 }
 
-void raytrace(Real xobs, Real yobs, Real iobs, Real rin,
-    Real disk_length_combined, RayHit &hit, int &stop_integration, Env *env) {
+void raytrace(Real xobs, Real yobs, Real iobs, RayHit &hit, int &stop_integration, Env *env) {
   /* ----- compute photon initial conditions ----- */
   const Real xobs2 = xobs * xobs;
   const Real yobs2 = yobs * yobs;
