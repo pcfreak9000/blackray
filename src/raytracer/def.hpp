@@ -35,31 +35,9 @@ extern Real spin;
 extern Real iobs_deg;
 extern int phicount;
 
-struct SurfacePoint {
-  Real x;
-  Real y;
-  union {
-    struct {
-      Real u0, u1, u2, u3;
-    };
-    //second struct probably useless but symmetry
-    struct {
-      Real u[4];
-    };
-  };
-  Real density;
-  int index;
-};
-
 struct IntegratorData {
   Real r, th, rprev, thprev, kr, kth, b, obsenergy, const1, carter;
   Real kvec[4];
-};
-
-struct SurfaceElement {
-  SurfacePoint *sp0;
-  SurfacePoint *sp1;
-  int index;
 };
 
 struct RayHit {

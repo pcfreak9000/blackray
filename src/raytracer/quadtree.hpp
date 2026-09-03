@@ -11,6 +11,30 @@
 #define Q3 2
 #define Q4 3
 #define NO_INTERSECT -1
+
+struct SurfacePoint {
+  Real x;
+  Real y;
+  union {
+    struct {
+      Real u0, u1, u2, u3;
+    };
+    //second struct probably useless but symmetry
+    struct {
+      Real u[4];
+    };
+  };
+  Real density;
+  int index;
+};
+
+struct SurfaceElement {
+  SurfacePoint *sp0;
+  SurfacePoint *sp1;
+  int index;
+};
+
+
 class QuadTree {
 public:
   QuadTree(Real x, Real y, Real width, Real height);

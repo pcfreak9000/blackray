@@ -168,10 +168,6 @@ void initialConditionGenerator(const Real &rstep, const Real &pstep, initialcond
 
 }
 
-void somefunc(std::unique_ptr<QuadTree>& tree){
-  tree = std::make_unique<QuadTree>(0,0,1,1);
-}
-
 int main(int argc, char *argv[]) {
   std::cout << "Setting up raytracer..." << std::endl;
   if (DEBUG_DIV != 1.0) std::cout << "debug_div is non-one" << std::endl;
