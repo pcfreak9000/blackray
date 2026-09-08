@@ -1,8 +1,5 @@
 #pragma once
-
-//Where is this used?
-//#include <algorithm>
-
+#include <cmath>
 #define DEBUG_DIV 1.0
 #define RING_DIV 15
 #define MAX_ITER 10000
@@ -19,8 +16,6 @@
 
 #define IMAX 400
 
-#define THIN
-
 using Real = long double;
 
 #define SQR(x) ((x)*(x))
@@ -35,13 +30,16 @@ extern Real spin;
 extern Real iobs_deg;
 extern int phicount;
 
-struct IntegratorData {
-  Real r, th, rprev, thprev, kr, kth, b, obsenergy, const1, carter;
-  Real kvec[4];
+
+struct Record {
+  int stop_integration_condition;
+  size_t photon_index;
+  Real xobs, yobs;
+  Real r;
+  Real gfactor;
+  Real cosem;
+  bool output;
+  size_t ray_index;
+  Real robs;
 };
 
-struct RayHit {
-  Real cosem;
-  Real gfactor;
-  Real r;
-};

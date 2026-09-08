@@ -1,44 +1,24 @@
-#include "environment.hpp"
-#include "metric.hpp"
-#include "redshift.hpp"
 #include <cmath>
 #include <iostream>
 
-Real interpolate(Real a, Real b, Real f) {
-  return (1.0 - f) * a + f * b;
-}
-//finds any intersection. it is not guranteed (but very likely) that it is the closest one, i.e. the first hit. Sufficiently small stepsize should circuvent the problem,
-//as well as retaking the step with a smaller stepsize.
-//this might interpolate between a mesh cell right beyond the horizon, which might contain invalid data, and the first cell outside the horizon,
-//for disk shapes which come very close to the horizon
-//at the moment, this does not seem to be a problem, but keep this in mind, especially if and when doing a clean rewrite of this
-bool get_interpolated_sp(const Real x1, const Real y1, const Real x2,
-    const Real y2, QuadTree *quadtree, SurfacePoint &out) {
-  SurfaceElement *elem;
-  Real result = quadtree->check_intersect(x1, y1, x2, y2, &elem);
-  if (result != NO_INTERSECT) {
-    out.index = elem->index;
-    Real xi = (elem->sp0->x) + result * ((elem->sp1->x) - (elem->sp0->x));
-    Real yi = (elem->sp0->y) + result * ((elem->sp1->y) - (elem->sp0->y));
-    out.x = xi;
-    out.y = yi;
-    out.density = interpolate(elem->sp0->density, elem->sp1->density, result);
-    //should be zero if either p is zero because linear interpolation of these velocities at that place is probably not physically
-    out.u0 = interpolate(elem->sp0->u0, elem->sp1->u0, result);
-    out.u1 = interpolate(elem->sp0->u1, elem->sp1->u1, result);
-    out.u2 = interpolate(elem->sp0->u2, elem->sp1->u2, result);
-    out.u3 = interpolate(elem->sp0->u3, elem->sp1->u3, result);
-    return true;
-  }
-  return false;
-}
+#include "environment.hpp"
+#include "metric.hpp"
+#include "redshift.hpp"
+#include "problem.hpp"
 
 GRMHDDisk::GRMHDDisk(QuadTree *tree, Real checkr) :
     tree(tree), checkr(checkr) {
 }
 
-bool GRMHDDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
-    const Real &thprev, SurfacePoint &outSurface) {
+int Entity::calculateRedshift(const InitialCondition *ic, const RayHit &hit,
+    Real &gfactor, Real &cosem) {
+  gfactor = 1.0;
+  cosem = 0.0;
+  return 0;
+}
+
+int GRMHDDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
+    const Real &thprev) {
   //not at all close to disk so we don't need to perform the checks below
   if (r > checkr) return false;
   //check if the new position intersects the accretion disk
@@ -48,11 +28,11 @@ bool GRMHDDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
   Real ycoord = r * std::cos(th);
   Real xcoordprev = std::sqrt(rprev * rprev + spin2) * std::sin(thprev);
   Real ycoordprev = rprev * std::cos(thprev);
-
-  bool res = get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord, tree,
+  SurfacePoint outSurface;
+  bool res = tree->get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
       outSurface);
   if (std::abs(outSurface.y) <= 0.0 || outSurface.x <= 0.0) return false;
-  return res;
+  return res?outSurface.index:0;
 }
 
 void scalarProduct(Real met[4][4], Real *fvec0, Real *fvec1, Real &scal) {
@@ -79,32 +59,40 @@ void correct4VelNorm(Real met[4][4], Real norm, Real *fvel) {
   //Real deltaut = dif/met[0][0];
   //fvel[0] = std::sqrt(fvel[0]*fvel[0]-deltaut);
 }
-int GRMHDDisk::intersect(const IntegratorData &id,
-    const SurfacePoint &surfacepoint, RayHit &hit) {
-  hit.r = id.r;
+
+
+int GRMHDDisk::calculateRedshift(const InitialCondition* ic, const RayHit &hit, Real &gfactor, Real &cosem) {
   //to calculate the redshift, we need the photon momentum k (which is present with kr and kth, kt=-E=kt0, kphi=L=kphi0) the observer 4-vel,
   //which is (1,0,0,0), and the interpolated 4-vel of the disk. With this, we can calculate the gfactor.
   Real met[4][4];
-  metric(id.r, id.th, met);
 
+  metric(hit.pvec.r, hit.pvec.th, met);
+  Real spin2 = SQR(spin);
+  Real xcoord = std::sqrt(hit.pvec.r * hit.pvec.r + spin2) * std::sin(hit.pvec.th);
+  Real ycoord = hit.pvec.r * std::cos(hit.pvec.th);
+  Real xcoordprev = std::sqrt(hit.pvecau.r * hit.pvecau.r + spin2)
+      * std::sin(hit.pvecau.th);
+  Real ycoordprev = hit.pvecau.r * std::cos(hit.pvecau.th);
+  SurfacePoint outSurface;
+  tree->get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord, outSurface);
   //Real x = std::std::sqrt(r);
   //Real p_ut = (0.0 + CUBE(x))/std::std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
   //Real p_uph = 1/std::std::sqrt(CUBE(x)*(2*0.0+CUBE(x)-3*x));
   //Real uarray[4] = {p_ut,0.0,0.0,p_uph};
   //Real uarray[4] = {1,0,0,0};
-  Real uarray[4] = { surfacepoint.u0, surfacepoint.u1, surfacepoint.u2,
-      surfacepoint.u3 };
+//  Real uarray[4] = { outSurface.u0, outSurface.u1, outSurface.u2,
+//      outSurface.u3 };
 
   //to fix any inconsistencies introduced by linear interpolation or the change of coordinate chart (KS->BL)
   //or code differences between Athena++ and Blackray or simply numerical issues in the entire pipeline
   //the fix is done by recalculating (only) the time component of the 4-velocity so that the normalization is correct, i.e. far closer to -1.
   //the highest delta |spi.u0-fixedu0| is approximately 0.05 for an average disk.
   Real norm;
-  scalarProduct(met, uarray, uarray, norm);
-  correct4VelNorm(met, norm, uarray);
+  scalarProduct(met, outSurface.u, outSurface.u, norm);
+  correct4VelNorm(met, norm, outSurface.u);
   //uarray[0] is nan sometimes: this should not happen but for some reason the velocity correction introduces this (after code refactorings) so the questions stays, why suddenly now??
   Real newnorm;
-  scalarProduct(met, uarray, uarray, newnorm);
+  scalarProduct(met, outSurface.u, outSurface.u, newnorm);
 #ifdef DEBUG_FVEL_NORM
       if(norm > -0.97 || norm < -1.03) {
         std::cout << "4-Vel norm deviates significantly, ignoring ray" << std::endl;
@@ -119,21 +107,20 @@ int GRMHDDisk::intersect(const IntegratorData &id,
     std::cout << "even fixed 4-vel norm deviates significantly, ignoring ray"
         << std::endl;
     //stop_integration = 6;
-    hit.cosem = 0.0;
-    hit.gfactor = 1.0;
-    hit.r = id.r;
+    cosem = 0.0;
+    gfactor = 1.0;
     return 6;
-  } else {
+  }
 
-    Real g_tt, g_pp, g_tp;
-    g_tt = met[0][0];
-    g_pp = met[3][3];
-    g_tp = met[0][3];
-    Real denom = (g_tt * g_pp - g_tp * g_tp);
-    Real ktcalc = -(g_pp + id.b * g_tp) / denom;
-    Real kphicalc = (g_tp + id.b * g_tt) / denom;
+  Real g_tt, g_pp, g_tp;
+  g_tt = met[0][0];
+  g_pp = met[3][3];
+  g_tp = met[0][3];
+  Real denom = (g_tt * g_pp - g_tp * g_tp);
+  Real ktcalc = -(g_pp + ic->b * g_tp) / denom;
+  Real kphicalc = (g_tp + ic->b * g_tt) / denom;
 
-    Real karray[4] = { ktcalc, id.kr, id.kth, kphicalc };
+  Real karray[4] = { ktcalc, hit.pvec.kr, hit.pvec.kth, kphicalc };
 
 #ifdef DEBUG_FMOM_NORM
         Real knorm;
@@ -145,36 +132,35 @@ int GRMHDDisk::intersect(const IntegratorData &id,
         }
 #endif
 
-    Real emenergy;
-    scalarProduct(met, uarray, karray, emenergy);
-    hit.gfactor = id.obsenergy / emenergy;
+  Real emenergy;
+  scalarProduct(met, outSurface.u, karray, emenergy);
+  gfactor = ((gf_ic*) ic)->obsenergy / emenergy;
 
-    //cosem stays artifical
-    Real gfactorforcosem;
-    redshift(hit.r, id.const1, gfactorforcosem);
-    /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
-    hit.cosem = id.carter * gfactorforcosem
-        / std::sqrt(SQR(hit.r) + epsi3 / hit.r);
-    //Workaround for redshift function giving nan...
-    if (std::isnan(hit.cosem)) {
-      hit.cosem = id.carter * hit.gfactor
-          / std::sqrt(SQR(hit.r) + epsi3 / hit.r);
-      if (hit.cosem > 1.05) {
-        std::cout
-            << "Cosem was nan, then fixed cosem was > 1.05, ignoring ray: "
-            << hit.cosem << std::endl;
-        hit.gfactor = 1.0;
-        hit.cosem = 0.0;
-        return 6;
-      } else if (hit.cosem > 1.0) {
-        hit.cosem = 1.0;
-      }
+  //cosem stays artifical
+  Real gfactorforcosem;
+  redshift(hit.pvec.r, ((gf_ic*) ic)->const1, gfactorforcosem);
+  /*Non Kerr PRD 90, 064002 (2014) Eq. 34*/
+  cosem = ((gf_ic*) ic)->carter * gfactorforcosem
+      / std::sqrt(SQR(hit.pvec.r) + epsi3 / hit.pvec.r);
+  //Workaround for redshift function giving nan...
+  if (std::isnan(cosem)) {
+    cosem = ((gf_ic*) ic)->carter * gfactor
+        / std::sqrt(SQR(hit.pvec.r) + epsi3 / hit.pvec.r);
+    if (cosem > 1.05) {
+      std::cout << "Cosem was nan, then fixed cosem was > 1.05, ignoring ray: "
+          << cosem << std::endl;
+      gfactor = 1.0;
+      cosem = 0.0;
+      return 6;
+    } else if (cosem > 1.0) {
+      cosem = 1.0;
     }
   }
-  return surfacepoint.index;
+
+  return 0;
 }
 
-Real GRMHDDisk::getMaxRadius(){
+Real GRMHDDisk::getMaxRadius() {
   return checkr;
 }
 
@@ -182,23 +168,24 @@ ThinDisk::ThinDisk(Real innerr, Real outerr) :
     innerr(innerr), outerr(outerr) {
 }
 
-bool ThinDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
-    const Real &thprev, SurfacePoint &outSurface) {
+int ThinDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
+    const Real &thprev) {
   if (r > outerr && rprev > outerr) return false;
   if (r <= innerr && rprev <= innerr) return false;
   if ((th > Pi / 2.0 && thprev < Pi / 2.0)
       || (th < Pi / 2.0 && thprev > Pi / 2.0)) {
-    return true;
+    return 512;
   }
-  return false;
+  return 0;
 }
 
-int ThinDisk::intersect(const IntegratorData &id,
-    const SurfacePoint &surfacepoint, RayHit &hit) {
-  hit.r = id.r;
-  redshift(hit.r, id.const1, hit.gfactor);
-  hit.cosem = id.carter * hit.gfactor / std::sqrt(SQR(hit.r) + epsi3 / hit.r);
-  return 512;
+
+int ThinDisk::calculateRedshift(const InitialCondition* ic, const RayHit &hit,
+    Real &gfactor, Real &cosem) {
+  redshift(hit.pvec.r, ((gf_ic*) ic)->const1, gfactor);
+  cosem = ((gf_ic*) ic)->carter * gfactor
+      / std::sqrt(SQR(hit.pvec.r) + epsi3 / hit.pvec.r);
+  return 0;
 }
 
 Real ThinDisk::getMaxRadius() {
@@ -209,53 +196,56 @@ PlungingRegion::PlungingRegion(Real isco) :
     isco(isco) {
 }
 
-bool PlungingRegion::checkIntersect(const Real &r, const Real &th,
-    const Real &rprev, const Real &thprev, SurfacePoint &outSurface) {
+int PlungingRegion::checkIntersect(const Real &r, const Real &th,
+    const Real &rprev, const Real &thprev) {
   if (r > isco && rprev > isco) return false;
   if ((th > Pi / 2.0 && thprev < Pi / 2.0)
       || (th < Pi / 2.0 && thprev > Pi / 2.0)) {
-    return true;
+    return 600;
   }
-  return false;
+  return 0;
 }
-int PlungingRegion::intersect(const IntegratorData &id,
-    const SurfacePoint &surfacepoint, RayHit &hit) {
-  hit.r = id.r;
+int PlungingRegion::calculateRedshift(const InitialCondition* ic,
+    const RayHit &hit, Real &gfactor, Real &cosem) {
   Real met[4][4];
-  metric(id.r, id.th, met);
+  metric(hit.pvec.r, hit.pvec.th, met);
   Real g_tt, g_pp, g_tp;
   g_tt = met[0][0];
   g_pp = met[3][3];
   g_tp = met[0][3];
   Real denom = (g_tt * g_pp - g_tp * g_tp);
-  Real ktcalc = -(g_pp + id.b * g_tp) / denom;
-  Real kphicalc = (g_tp + id.b * g_tt) / denom;
+  Real ktcalc = -(g_pp + ic->b * g_tp) / denom;
+  Real kphicalc = (g_tp + ic->b * g_tt) / denom;
 
-  Real karray[4] = { ktcalc, id.kr, id.kth, kphicalc };
-  redshift_plunge(isco, hit.r, karray, hit.gfactor);
-  hit.cosem = id.carter * hit.gfactor / std::sqrt(SQR(hit.r) + epsi3 / hit.r);
-  return 600;
+  Real karray[4] = { ktcalc, hit.pvec.kr, hit.pvec.kth, kphicalc };
+  redshift_plunge(isco, hit.pvec.r, karray, gfactor);
+  cosem = ((gf_ic*) ic)->carter * gfactor
+      / std::sqrt(SQR(hit.pvec.r) + epsi3 / hit.pvec.r);
+  return 0;
 }
-Real PlungingRegion::getMaxRadius(){
+
+Real PlungingRegion::getMaxRadius() {
   return isco;
 }
 
-void Env::addEntity(Entity *entity) {
-  this->ents.push_back(entity);
-  maxr = std::max(maxr, entity->getMaxRadius());
+void Env::addEntity(std::unique_ptr<Entity> ptr) {
+  maxr = std::max(maxr, ptr->getMaxRadius());
+  this->ents.push_back(std::move(ptr));
 }
-bool Env::checkIntersect(const Real &r, const Real &th, const Real &rprev,
-    const Real &thprev, SurfacePoint &outsurf, Entity*& hitent) {
-  if(r > maxr){
+
+int Env::checkIntersect(const Real &r, const Real &th, const Real &rprev,
+    const Real &thprev, Entity *&hitent) {
+  if (r > maxr) {
     hitent = nullptr;
     return false;
   }
-  for (Entity *ent : this->ents) {
-    if (ent->checkIntersect(r, th, rprev, thprev, outsurf)) {
-      hitent = ent;
-      return true;
+  for (std::unique_ptr<Entity> &ent : this->ents) {
+    int n = ent->checkIntersect(r, th, rprev, thprev);
+    if (n) {
+      hitent = ent.get();
+      return n;
     }
   }
   hitent = nullptr;
-  return false;
+  return 0;
 }

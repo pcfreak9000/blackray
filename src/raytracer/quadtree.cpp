@@ -113,7 +113,34 @@ QuadTree::~QuadTree() {
 //   delete p;
 // }
 }
-
+Real interpolate(Real a, Real b, Real f) {
+  return (1.0 - f) * a + f * b;
+}
+//finds any intersection. it is not guranteed (but very likely) that it is the closest one, i.e. the first hit. Sufficiently small stepsize should circuvent the problem,
+//as well as retaking the step with a smaller stepsize.
+//this might interpolate between a mesh cell right beyond the horizon, which might contain invalid data, and the first cell outside the horizon,
+//for disk shapes which come very close to the horizon
+//at the moment, this does not seem to be a problem, but keep this in mind, especially if and when doing a clean rewrite of this
+bool QuadTree::get_interpolated_sp(const Real x1, const Real y1, const Real x2,
+    const Real y2, SurfacePoint &out) {
+  SurfaceElement *elem;
+  Real result = this->check_intersect(x1, y1, x2, y2, &elem);
+  if (result != NO_INTERSECT) {
+    out.index = elem->index;
+    Real xi = (elem->sp0->x) + result * ((elem->sp1->x) - (elem->sp0->x));
+    Real yi = (elem->sp0->y) + result * ((elem->sp1->y) - (elem->sp0->y));
+    out.x = xi;
+    out.y = yi;
+    out.density = interpolate(elem->sp0->density, elem->sp1->density, result);
+    //should be zero if either p is zero because linear interpolation of these velocities at that place is probably not physically
+    out.u0 = interpolate(elem->sp0->u0, elem->sp1->u0, result);
+    out.u1 = interpolate(elem->sp0->u1, elem->sp1->u1, result);
+    out.u2 = interpolate(elem->sp0->u2, elem->sp1->u2, result);
+    out.u3 = interpolate(elem->sp0->u3, elem->sp1->u3, result);
+    return true;
+  }
+  return false;
+}
 Real QuadTree::check_intersect(Real x1, Real y1, Real x2, Real y2, SurfaceElement** out){
 
   if(!is_leaf) {

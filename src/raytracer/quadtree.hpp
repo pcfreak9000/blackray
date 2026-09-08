@@ -5,7 +5,6 @@
 
 #include "def.hpp"
 
-
 #define Q1 0
 #define Q2 1
 #define Q3 2
@@ -34,11 +33,13 @@ struct SurfaceElement {
   int index;
 };
 
-
 class QuadTree {
 public:
   QuadTree(Real x, Real y, Real width, Real height);
   ~QuadTree();
+
+  bool get_interpolated_sp(const Real x1, const Real y1, const Real x2,
+      const Real y2, SurfacePoint &out);
   Real check_intersect(Real x1, Real y1, Real x2, Real y2,
       SurfaceElement ** intersect);
   void put_element(SurfaceElement *element);
@@ -51,7 +52,6 @@ private:
   size_t max_elements;
   bool is_leaf;
   size_t level;
-//  bool is_root;
 
   void subdivide();
   bool fits(SurfaceElement *element);

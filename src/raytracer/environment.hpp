@@ -1,25 +1,28 @@
 #pragma once
 
+class Entity;
+class Env;
+
 #include "def.hpp"
 #include "quadtree.hpp"
+#include "raytracingnew.hpp"
 
 class Entity {
 public:
-  virtual bool checkIntersect(const Real &r, const Real &th, const Real &rprev,
-      const Real &thprev, SurfacePoint &outSurface) = 0;
-  virtual int intersect(const IntegratorData &id,
-      const SurfacePoint &surfacepoint, RayHit &hit) = 0;
+  virtual int checkIntersect(const Real &r, const Real &th, const Real &rprev,
+      const Real &thprev) = 0;
   virtual Real getMaxRadius() = 0;
+
+  virtual int calculateRedshift(const InitialCondition* ic, const RayHit &hit, Real& gfactor, Real& cosem);
 };
 
 class GRMHDDisk : public Entity {
 public:
   GRMHDDisk(QuadTree *tree, Real checkr);
-  bool checkIntersect(const Real &r, const Real &th, const Real &rprev,
-      const Real &thprev, SurfacePoint &outSurface) override;
-  int intersect(const IntegratorData &id, const SurfacePoint &surfacepoint,
-      RayHit &hit) override;
+  int checkIntersect(const Real &r, const Real &th, const Real &rprev,
+      const Real &thprev) override;
   Real getMaxRadius() override;
+  int calculateRedshift(const InitialCondition* ic, const RayHit &hit, Real& gfactor, Real& cosem) override;
 private:
   QuadTree *tree;
   Real checkr;
@@ -28,11 +31,10 @@ private:
 class ThinDisk : public Entity {
 public:
   ThinDisk(Real inner, Real outer);
-  bool checkIntersect(const Real &r, const Real &th, const Real &rprev,
-      const Real &thprev, SurfacePoint &outSurface) override;
-  int intersect(const IntegratorData &id, const SurfacePoint &surfacepoint,
-      RayHit &hit) override;
+  int checkIntersect(const Real &r, const Real &th, const Real &rprev,
+      const Real &thprev) override;
   Real getMaxRadius() override;
+  int calculateRedshift(const InitialCondition* ic, const RayHit &hit, Real& gfactor, Real& cosem) override;
 private:
   Real innerr;
   Real outerr;
@@ -41,22 +43,21 @@ private:
 class PlungingRegion : public Entity {
 public:
   PlungingRegion(Real isco);
-  bool checkIntersect(const Real &r, const Real &th, const Real &rprev,
-      const Real &thprev, SurfacePoint &outSurface) override;
-  int intersect(const IntegratorData &id, const SurfacePoint &surfacepoint,
-      RayHit &hit) override;
+  int checkIntersect(const Real &r, const Real &th, const Real &rprev,
+      const Real &thprev) override;
   Real getMaxRadius() override;
+  int calculateRedshift(const InitialCondition* ic, const RayHit &hit, Real& gfactor, Real& cosem) override;
 private:
   Real isco;
 };
 
 class Env {
 public:
-  bool checkIntersect(const Real &r, const Real &th, const Real &rprev,
-      const Real &thprev, SurfacePoint &outsurf, Entity*& hitent);
-  void addEntity(Entity *entity);
+  int checkIntersect(const Real &r, const Real &th, const Real &rprev,
+      const Real &thprev, Entity*& hitent);
+  void addEntity(std::unique_ptr<Entity> ptr);
 private:
-  std::vector<Entity*> ents;
+  std::vector<std::unique_ptr<Entity>> ents;
   Real maxr = 0;
 };
 
