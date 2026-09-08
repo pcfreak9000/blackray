@@ -2,6 +2,33 @@
 
 #include <cmath>
 
+
+void scalarProduct(Real met[4][4], Real *fvec0, Real *fvec1, Real &scal) {
+  scal = 0.0;
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      scal += met[i][j] * fvec0[i] * fvec1[j];
+    }
+  }
+}
+
+void correct4VelNorm(Real met[4][4], Real norm, Real *fvel) {
+  Real g_tt = met[0][0];
+  Real g_tp = met[0][3];
+  Real udt = fvel[0];
+  Real up = fvel[3];
+  Real Fp1 = norm + 1;
+
+  Real radi = SQR(g_tt*udt) + 2.0 * g_tt * udt * g_tp * up
+      - g_tt * Fp1+SQR(g_tp*up);
+  fvel[0] = -(std::sqrt(radi) + g_tp * up) / g_tt;
+
+  //Real dif = norm+1;
+  //Real deltaut = dif/met[0][0];
+  //fvel[0] = std::sqrt(fvel[0]*fvel[0]-deltaut);
+}
+
+
 bool gluInvertMatrix(const Real m[16], Real invOut[16]) {
   Real inv[16], det;
   int i;

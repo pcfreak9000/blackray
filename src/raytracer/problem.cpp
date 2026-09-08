@@ -1,5 +1,6 @@
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <memory>
 
 #include "problem.hpp"
@@ -10,10 +11,53 @@
 #include "quadtree.hpp"
 #include "environment.hpp"
 
-//in environment.cpp, clean up
-void scalarProduct(Real met[4][4], Real *fvec0, Real *fvec1, Real &scal);
 static constexpr Real dobs = 1.0e+8; /* distance of the observer double def oof */
+
 static myinitialconditions initcons;
+static std::vector<Record> records;
+static size_t photon_index = 0;
+
+void write(const char *tempdir, const char *outtxt, std::vector<Record> &recs) {
+  char filename_o2[256];
+
+  FILE *foutput_coord;
+
+  std::string tempdirs(tempdir);
+
+  /*photon data output file*/
+  // sprintf(filename_o2,"coord_a%.03f.epsilon_r%.02f.epsilon_t%.02f.i%.02f.dat",spin,epsi3,iobs_deg);
+  std::string s2(
+      "data/"
+          "photons_data_a%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%.05Lf.dat");
+  snprintf(filename_o2, sizeof(filename_o2), (tempdirs + s2).c_str(), spin,
+      iobs_deg, epsi3, a13, a22, a52);
+
+  foutput_coord = fopen(filename_o2, "w");
+  if (foutput_coord == nullptr) std::cerr << "Problems with data file!"
+      << std::endl;
+
+  std::ofstream tmpOutFile(outtxt);
+  for (Record r : recs) {
+    if (r.output) {
+      fprintf(foutput_coord, "%zu %Lf %Lf %Lf %Lf %Lf\n", r.photon_index,
+          r.xobs, r.yobs, r.r, r.gfactor, r.cosem);
+      if (!RESTRICT_DEBUGFILE_CRIT && r.ray_index % DEBUGFILE_OUT_DIV == 0) {
+        tmpOutFile << r.xobs << " " << r.yobs << " " << r.gfactor << " "
+            << r.stop_integration_condition << " " << std::endl;
+      }
+    } else {
+      if ((!RESTRICT_DEBUGFILE_CRIT && r.ray_index % DEBUGFILE_OUT_DIV == 0)
+          || (r.stop_integration_condition == 255
+              || r.stop_integration_condition == 6)) {
+        tmpOutFile << r.xobs << " " << r.yobs << " " << 1.0 << " "
+            << r.stop_integration_condition << std::endl;
+      }
+    }
+  }
+  tmpOutFile.close();
+  fclose(foutput_coord);
+}
+
 void initialConditionGenerator(const Real &rstep, const Real &pstep,
     myinitialconditions &ic) {
   /* ----- Set computational parameters ----- */
@@ -59,6 +103,7 @@ void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
 
   initialConditionGenerator(rstep, pstep, initcons);
   ray_count_total = initcons.count_total;
+  records.reserve(initcons.count_total);
 }
 
 std::unique_ptr<InitialCondition> initialcondition(const size_t &ray_index) {
@@ -77,6 +122,8 @@ std::unique_ptr<InitialCondition> initialcondition(const size_t &ray_index) {
 
   const Real xobs2 = xobs * xobs;
   const Real yobs2 = yobs * yobs;
+
+  cond->dobs = dobs;
 
   const Real fact1 = yobs * std::sin(iobs) + dobs * std::cos(iobs);
   const Real fact2 = dobs * std::sin(iobs) - yobs * std::cos(iobs);
@@ -169,20 +216,48 @@ inline void handleNonsense(Record &rec) {
 #endif
 }
 
-void postRecord(Record &rec, const InitialCondition *const ic) {
+void notifyDone(const int &stopping_condition, const InitialCondition *const ic,
+    const RayHit &hit, const size_t &ray_index) {
+  Record rec;
+  rec.stop_integration_condition = stopping_condition;
   const gf_ic *const gic = (gf_ic*) ic;
   rec.xobs = gic->robs * std::cos(gic->pobs);
   rec.yobs = gic->robs * std::sin(gic->pobs);
   rec.robs = gic->robs;
+  rec.r = hit.pvec.r;
+  if (hit.entity != nullptr) {
+    Real gfactor;
+    Real cosem;
+    int x = hit.entity->calculateRedshift(ic, hit, gfactor, cosem);
+    if (x != 0) rec.stop_integration_condition = ST_INT_PROBLEM;
+    rec.cosem = cosem;
+    rec.gfactor = gfactor;
+    handleNonsense(rec);
+  }
+  rec.output = rec.stop_integration_condition >= MIN_ST_INT_HIT_INDEX;
+  if (!rec.output) {
+    rec.gfactor = 1.0;
+    rec.cosem = 0.0;
+  }
+#pragma omp ordered
+  {
+    rec.ray_index = ray_index;
+    if (rec.output) {
+      rec.photon_index = photon_index;
+      photon_index++;
+    }
+    records.push_back(rec);
+  }
 }
 
-void getRecord(Record &rec, const RayHit &hit,
-    const InitialCondition *const ic) {
-  Real gfactor;
-  Real cosem;
-  int x = hit.entity->calculateRedshift(ic, hit, gfactor, cosem);
-  if (x != 0) rec.stop_integration_condition = ST_INT_PROBLEM;
-  rec.cosem = cosem;
-  rec.gfactor = gfactor;
-  handleNonsense(rec);
+void finishProblem(const char *tempdir, const char *outtxt) {
+  std::cout << "Writing data..." << std::endl;
+  /* ----- file stuff ----- */
+
+  write(tempdir, outtxt, records);
+
+  std::cout << "Integrated " << (records.size()) << " rays of which "
+      << photon_index << " hit the disk" << std::endl;
+  std::cout << "Finishing..." << std::endl;
 }
+

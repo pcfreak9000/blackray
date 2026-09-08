@@ -6,8 +6,30 @@
 #include "redshift.hpp"
 #include "problem.hpp"
 
-GRMHDDisk::GRMHDDisk(QuadTree *tree, Real checkr) :
-    tree(tree), checkr(checkr) {
+
+
+
+
+void Env::addEntity(std::unique_ptr<Entity> ptr) {
+  maxr = std::max(maxr, ptr->getMaxRadius());
+  this->ents.push_back(std::move(ptr));
+}
+
+int Env::checkIntersect(const Real &r, const Real &th, const Real &rprev,
+    const Real &thprev, Entity *&hitent) {
+  if (r > maxr) {
+    hitent = nullptr;
+    return 0;
+  }
+  for (std::unique_ptr<Entity> &ent : this->ents) {
+    int n = ent->checkIntersect(r, th, rprev, thprev);
+    if (n) {
+      hitent = ent.get();
+      return n;
+    }
+  }
+  hitent = nullptr;
+  return 0;
 }
 
 int Entity::calculateRedshift(const InitialCondition *ic, const RayHit &hit,
@@ -17,10 +39,15 @@ int Entity::calculateRedshift(const InitialCondition *ic, const RayHit &hit,
   return 0;
 }
 
+GRMHDDisk::GRMHDDisk(QuadTree *tree, Real checkr) :
+    tree(tree), checkr(checkr) {
+}
+
+
 int GRMHDDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
     const Real &thprev) {
   //not at all close to disk so we don't need to perform the checks below
-  if (r > checkr) return false;
+  if (r > checkr) return 0;
   //check if the new position intersects the accretion disk
   //convert coordinates of current and previous position via a BL-cartesian conversion
   Real spin2 = SQR(spin);
@@ -31,34 +58,10 @@ int GRMHDDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
   SurfacePoint outSurface;
   bool res = tree->get_interpolated_sp(xcoordprev, ycoordprev, xcoord, ycoord,
       outSurface);
-  if (std::abs(outSurface.y) <= 0.0 || outSurface.x <= 0.0) return false;
-  return res?outSurface.index:0;
+  if (std::abs(outSurface.y) <= 0.0 || outSurface.x <= 0.0) return 0;
+  return res ? outSurface.index : 0;
 }
 
-void scalarProduct(Real met[4][4], Real *fvec0, Real *fvec1, Real &scal) {
-  scal = 0.0;
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      scal += met[i][j] * fvec0[i] * fvec1[j];
-    }
-  }
-}
-
-void correct4VelNorm(Real met[4][4], Real norm, Real *fvel) {
-  Real g_tt = met[0][0];
-  Real g_tp = met[0][3];
-  Real udt = fvel[0];
-  Real up = fvel[3];
-  Real Fp1 = norm + 1;
-
-  Real radi = SQR(g_tt*udt) + 2.0 * g_tt * udt * g_tp * up
-      - g_tt * Fp1+SQR(g_tp*up);
-  fvel[0] = -(std::sqrt(radi) + g_tp * up) / g_tt;
-
-  //Real dif = norm+1;
-  //Real deltaut = dif/met[0][0];
-  //fvel[0] = std::sqrt(fvel[0]*fvel[0]-deltaut);
-}
 
 
 int GRMHDDisk::calculateRedshift(const InitialCondition* ic, const RayHit &hit, Real &gfactor, Real &cosem) {
@@ -109,7 +112,7 @@ int GRMHDDisk::calculateRedshift(const InitialCondition* ic, const RayHit &hit, 
     //stop_integration = 6;
     cosem = 0.0;
     gfactor = 1.0;
-    return 6;
+    return ST_INT_PROBLEM;
   }
 
   Real g_tt, g_pp, g_tp;
@@ -151,13 +154,13 @@ int GRMHDDisk::calculateRedshift(const InitialCondition* ic, const RayHit &hit, 
           << cosem << std::endl;
       gfactor = 1.0;
       cosem = 0.0;
-      return 6;
+      return ST_INT_PROBLEM;
     } else if (cosem > 1.0) {
       cosem = 1.0;
     }
   }
 
-  return 0;
+  return ST_INT_CONTINUE;
 }
 
 Real GRMHDDisk::getMaxRadius() {
@@ -228,24 +231,3 @@ Real PlungingRegion::getMaxRadius() {
   return isco;
 }
 
-void Env::addEntity(std::unique_ptr<Entity> ptr) {
-  maxr = std::max(maxr, ptr->getMaxRadius());
-  this->ents.push_back(std::move(ptr));
-}
-
-int Env::checkIntersect(const Real &r, const Real &th, const Real &rprev,
-    const Real &thprev, Entity *&hitent) {
-  if (r > maxr) {
-    hitent = nullptr;
-    return false;
-  }
-  for (std::unique_ptr<Entity> &ent : this->ents) {
-    int n = ent->checkIntersect(r, th, rprev, thprev);
-    if (n) {
-      hitent = ent.get();
-      return n;
-    }
-  }
-  hitent = nullptr;
-  return 0;
-}

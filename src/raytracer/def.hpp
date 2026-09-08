@@ -28,7 +28,6 @@ constexpr Real Pi =
 extern Real epsi3, a13, a22, a52;
 extern Real spin;
 extern Real iobs_deg;
-extern int phicount;
 
 
 struct Record {
