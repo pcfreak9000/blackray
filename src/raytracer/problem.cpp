@@ -11,11 +11,91 @@
 #include "quadtree.hpp"
 #include "environment.hpp"
 
-static constexpr Real dobs = 1.0e+8; /* distance of the observer double def oof */
+static constexpr Real dobs = 1.0e+8; /* distance of the observer */
+
+struct Record {
+  int stop_integration_condition;
+  size_t photon_index;
+  Real xobs, yobs;
+  Real r;
+  Real gfactor;
+  Real cosem;
+  bool output;
+  size_t ray_index;
+  Real robs;
+};
 
 static myinitialconditions initcons;
 static std::vector<Record> records;
 static size_t photon_index = 0;
+static Real iobs_deg;
+
+
+void ironlinestuff(const Real& rstep, const Real& alpha, const char *tempdirs, std::vector<Record> &records){
+
+  /* ----- Set model for the spectral line ----- */
+
+  constexpr Real E_line = 6.4; /* energy rest of the line in keV */
+  constexpr Real N_0 = 1.0; /* normalization */
+  // alpha  = -3;     radial power law index
+
+  const Real rstep2 = (rstep - 1) / rstep;
+
+  Real E_obs[IMAX];
+  Real N_obs[IMAX];
+  E_obs[0] = 0.0125000002; /* minimum photon energy detected by the observer; in keV */
+  N_obs[0] = 0;
+  constexpr Real E_step = 0.025;
+  for (size_t i = 1; i < IMAX; i++) {
+    E_obs[i] = E_obs[i - 1] + E_step;
+    N_obs[i] = 0;
+  }
+
+  for (Record rec : records) {
+    if (rec.output) {
+      Real &gfactor = rec.gfactor;
+
+      /* --- integration - part 1 --- */
+      Real pp = gfactor * E_line;
+      Real bucket = (pp - E_obs[0]) / E_step;
+      if (bucket >= 0.0) {
+        size_t index = std::floor(bucket);
+        if (index < IMAX) {
+          Real qq = gfactor * gfactor * gfactor * gfactor;
+          qq = qq * std::pow(rec.r, alpha);
+          /* --- integration - part 2 --- */
+          //N_obs_add =
+          N_obs[index] += SQR(rec.robs) * rstep2 * qq;
+        }
+      }
+    }
+  }
+
+  Real N_tot = 0.0;
+#pragma omp parallel for reduction(+:N_tot)
+  for (size_t i = 0; i < IMAX; i++) {
+    N_obs[i] = N_0 * N_obs[i] / E_obs[i];
+    N_tot += N_obs[i];
+  }
+
+  /* --- print iron line --- */
+  char filename_o[256];
+  /*Iron line output file*/
+  // sprintf(filename_o,"iron_a%.03f.epsilon_r%.02f.epsilon_t%.02f.i%.02f.dat",spin,epsi3,iobs_deg);
+  // sprintf(filename_o,"ironline_data/iron_a%.05Le.i%.02Le.e_%.02Le.a13_%.02Le.a22_%.02Le.a52_%.02Le.dat",spin,iobs_deg,epsi3,a13,a22,a52);
+  std::string s1("ironline_data/"
+      "iron_a_%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%.05Lf.dat");
+  snprintf(filename_o, sizeof(filename_o), (tempdirs + s1).c_str(), spin,
+      iobs_deg, epsi3, a13, a22, a52);
+  FILE *foutput = fopen(filename_o, "w");
+  if (foutput == nullptr) std::cerr << "Problems with iron line file!"
+      << std::endl;
+
+  for (size_t i = 0; i < IMAX; i++) {
+    fprintf(foutput, "%Lf %.10Lf\n", E_obs[i], N_obs[i] / N_tot);
+  }
+  fclose(foutput);
+}
 
 void write(const char *tempdir, const char *outtxt, std::vector<Record> &recs) {
   char filename_o2[256];
@@ -86,6 +166,7 @@ void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
   const char *diskdatafile = argv[10];
   const Real rstep = atof(argv[8]);
   const Real pstep = atof(argv[9]);
+  iobs_deg = atof(argv[2]); /*inclination angle in degrees*/
   const Real spin2 = SQR(spin);
   std::unique_ptr<QuadTree> tree = readFileToTree(diskdatafile, maxx, maxy);
 //  if (!tree) return 1;
@@ -98,8 +179,9 @@ void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
   find_isco(15.0, isco); /* Depends upon the properties of BH */
 //  GRMHDDisk disk(tree.get(), checkr);
   //env.addEntity(&disk);
-  env->addEntity(std::make_unique<ThinDisk>(isco, 200));
-  env->addEntity(std::make_unique<PlungingRegion>(isco));
+  env->addEntity(std::make_unique<GRMHDDisk>(std::move(tree), checkr));
+//  env->addEntity(std::make_unique<ThinDisk>(isco, 200));
+//  env->addEntity(std::make_unique<PlungingRegion>(isco));
 
   initialConditionGenerator(rstep, pstep, initcons);
   ray_count_total = initcons.count_total;

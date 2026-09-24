@@ -25,20 +25,9 @@ constexpr Real Pi =
     3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282L;
 //const Real Pi = std::acos(-1.0);
 
-extern Real epsi3, a13, a22, a52;
-extern Real spin;
-extern Real iobs_deg;
+
+//extern Real iobs_deg;
 
 
-struct Record {
-  int stop_integration_condition;
-  size_t photon_index;
-  Real xobs, yobs;
-  Real r;
-  Real gfactor;
-  Real cosem;
-  bool output;
-  size_t ray_index;
-  Real robs;
-};
+
 

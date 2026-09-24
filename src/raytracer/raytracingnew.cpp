@@ -5,7 +5,7 @@
 
 #include "aRK45.hpp"
 #include "diffeqs.hpp"
-
+#include "metric.hpp"
 #include "problem.hpp"
 
 //atol = 1.0e-10;

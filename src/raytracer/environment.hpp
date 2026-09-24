@@ -18,13 +18,13 @@ public:
 
 class GRMHDDisk : public Entity {
 public:
-  GRMHDDisk(QuadTree *tree, Real checkr);
+  GRMHDDisk(std::shared_ptr<QuadTree> tree, Real checkr);
   int checkIntersect(const Real &r, const Real &th, const Real &rprev,
       const Real &thprev) override;
   Real getMaxRadius() override;
   int calculateRedshift(const InitialCondition* ic, const RayHit &hit, Real& gfactor, Real& cosem) override;
 private:
-  QuadTree *tree;
+  std::shared_ptr<QuadTree> tree;
   Real checkr;
 };
 

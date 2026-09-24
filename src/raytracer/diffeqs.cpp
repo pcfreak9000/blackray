@@ -1,5 +1,7 @@
-#include "diffeqs.hpp"
+
 #include <cmath>
+#include "diffeqs.hpp"
+#include "metric.hpp"
 
 void diffeqs(const Real& b, const Real *const vars, Real diffs[]) {
   const Real& r = vars[0];

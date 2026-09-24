@@ -39,8 +39,8 @@ int Entity::calculateRedshift(const InitialCondition *ic, const RayHit &hit,
   return 0;
 }
 
-GRMHDDisk::GRMHDDisk(QuadTree *tree, Real checkr) :
-    tree(tree), checkr(checkr) {
+GRMHDDisk::GRMHDDisk(std::shared_ptr<QuadTree> tree, Real checkr) :
+    tree(std::move(tree)), checkr(checkr) {
 }
 
 

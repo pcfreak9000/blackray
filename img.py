@@ -29,7 +29,7 @@ def main(preptuple):
     if use_labels:
         # Define a color map as a dictionary of RGB tuples (values in range 0–1)
         label_colors = {
-            255: (1.0, 0.0, 0.0),   # too many iterations, red
+            1: (1.0, 0.0, 0.0),   # too many iterations, red
             6: (1.0, 0.0, 1.0),   # numerical problems, magenta
             130: (1.0, 0.647, 0.0),   # backside hit, orange
             131: (0.9, 0.583, 0.0),  # bakside hit, different
@@ -42,7 +42,7 @@ def main(preptuple):
             512: (1.0,1.0,0.1),
             600: (0.1,1.0,0.1)
         }
-        interpolmeth='linear'
+        interpolmeth='nearest'
         # Prepare RGB channels
         #grid_r = gengrid(((x_norm, 1.0-y_norm), [label_colors[l][0] for l in label_raw], (grid_x, grid_y), interpolmeth, 0.0))
         #grid_g = gengrid(((x_norm, 1.0-y_norm), [label_colors[l][1] for l in label_raw], (grid_x, grid_y), interpolmeth, 0.0))

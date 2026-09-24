@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+Real epsi3, a13, a22, a52;
+Real spin;
 
 void scalarProduct(Real met[4][4], Real *fvec0, Real *fvec1, Real &scal) {
   scal = 0.0;
