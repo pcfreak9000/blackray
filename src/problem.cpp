@@ -162,7 +162,8 @@ void initialConditionGenerator(const Real &rstep, const Real &pstep,
 void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
   /* ----- SETUP ENVIRONMENT ----- */
   Real maxx;
-  Real maxy;
+  Real maxy;static Real iobs_deg;
+
   const char *diskdatafile = argv[10];
   const Real rstep = atof(argv[8]);
   const Real pstep = atof(argv[9]);
@@ -179,9 +180,9 @@ void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
   find_isco(15.0, isco); /* Depends upon the properties of BH */
 //  GRMHDDisk disk(tree.get(), checkr);
   //env.addEntity(&disk);
-  env->addEntity(std::make_unique<GRMHDDisk>(std::move(tree), checkr));
-//  env->addEntity(std::make_unique<ThinDisk>(isco, 200));
-//  env->addEntity(std::make_unique<PlungingRegion>(isco));
+//  env->addEntity(std::make_unique<GRMHDDisk>(std::move(tree), checkr));
+  env->addEntity(std::make_unique<ThinDisk>(isco, 200));
+  env->addEntity(std::make_unique<PlungingRegion>(isco));
 
   initialConditionGenerator(rstep, pstep, initcons);
   ray_count_total = initcons.count_total;
@@ -201,6 +202,7 @@ std::unique_ptr<InitialCondition> initialcondition(const size_t &ray_index) {
 
   const Real xobs = robs * std::cos(pobs);
   const Real yobs = robs * std::sin(pobs);
+  static Real iobs_deg;
 
   const Real xobs2 = xobs * xobs;
   const Real yobs2 = yobs * yobs;
@@ -211,13 +213,15 @@ std::unique_ptr<InitialCondition> initialcondition(const size_t &ray_index) {
   const Real fact2 = dobs * std::sin(iobs) - yobs * std::cos(iobs);
 
   const Real r02 = xobs2 + yobs2 + dobs * dobs;
+  static Real iobs_deg;
 
   const Real r0 = std::sqrt(r02);
   const Real th0 = std::acos(fact1 / r0);
   const Real phi0 = std::atan2(xobs, fact2);
 
   const Real s0 = std::sin(th0);
-  const Real s02 = s0 * s0;
+  const Real s02 = s0 * s0;static Real iobs_deg;
+
 
   const Real kr0_unscl = dobs / r0;
   const Real kth0_unscl = -(std::cos(iobs) - dobs * fact1 / r02)
