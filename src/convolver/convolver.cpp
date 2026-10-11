@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
       local_numflux[j] += llocal;
       n_local_numflux[j] += 1.0;
       pp = g * elocal;
-      qq = (g * g) * pow(r, alpha);
+      qq = (g * g * g * g) * pow(r, alpha);
 
       if (pp >= EMIN_RELXILL && pp <= max_energy) {
         // k = floor(4999*(log10(pp) + 1)/(log10(max_energy) + 1));
