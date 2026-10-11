@@ -16,14 +16,17 @@ Real chi,eps3,Mdot,eta;
 Real johannsen_isco;
 #include "johannsen.h"
 
-
+//#define EDHD
 #define RayNum 100000
-#define imax 400
+#define imax 100
+
 static constexpr Real dobs = 2000; /* distance of the observer */
 
 struct Record {
+#ifdef EDHD
 	Real emisDelta;
 	Real incDelta;
+#endif
 	Real rCylindCoord;
 	Real rSurf;
 	Real thetaSurf;
@@ -68,12 +71,12 @@ void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
 	//env.addEntity(&disk);
 //  env->addEntity(std::make_unique<GRMHDDisk>(std::move(tree), checkr));
 	env->addEntity(std::make_unique<ThinDisk>(isco, 1050));
-	//env->addEntity(std::make_unique<PlungingRegion>(isco));
+	env->addEntity(std::make_unique<PlungingRegion>(isco));
 	johannsen_isco = kerr_rms(spin);
     eta = 1.0 - specific_energy(johannsen_isco);
 	for (int i = 0; i < imax - 1; i++) {
-		rDisk[i] = std::pow((double) i / (imax - 2), 3) * (1000. - johannsen_isco)
-				+ johannsen_isco;
+		rDisk[i] = std::pow((Real) i / (imax - 2), 3) * (1000. - johannsen_isco)
+				+ 1;
 		RayCount[i] = 0;
 	}
 	rDisk[imax - 1] = 1050;
@@ -87,12 +90,13 @@ std::unique_ptr<InitialCondition> initialcondition(const size_t &ray_index) {
 	Real met[4][4];
 
 	Real Emis_delta[2];
-	Emis_delta[1] = M_PI - 1e-8;
+	Emis_delta[1] = Pi - 1e-8;
 	Emis_delta[0] = 1E-8;
 	Real delta = Emis_delta[0];
-	Real stepDelta = (Emis_delta[1] - Emis_delta[0]) / ((double) RayNum - 1.);
+	Real stepDelta = (Emis_delta[1] - Emis_delta[0]) / ((Real) RayNum - 1.);
 	//delta -= stepDelta;
-	delta = Emis_delta[0] + stepDelta * (ray_index - 1);
+	delta = Emis_delta[0] + stepDelta * (ray_index - 1.0);
+
 	const Real r0 = height;  //height
 	const Real th0 = 1E-8;
 	const Real phi0 = 0.0;
@@ -105,8 +109,9 @@ std::unique_ptr<InitialCondition> initialcondition(const size_t &ray_index) {
 
 	const Real bkr0 = std::cos(delta) / std::sqrt(g_rr);
 	const Real bkth0 = std::sin(delta) / std::sqrt(g_thth);
+
 	const Real kphi0 = 0.0;
-	const Real E = sqrt(
+	const Real E = std::sqrt(
 			g_tp * g_tp * kphi0 * kphi0
 					- g_tt
 							* (g_rr * SQR(bkr0) + g_thth * SQR(bkth0)
@@ -134,11 +139,12 @@ void notifyDone(const int &stopping_condition, const InitialCondition *const ic,
 		const RayHit &hit, const size_t &ray_index) {
 	Record rec;
 	if (hit.entity != nullptr) {
-		//std::cout << stopping_condition << std::endl;
 		const del_ic *const dic = (del_ic*) ic;
 		Real rHit = (hit.pvec.r + hit.pvecau.r) * 0.5;
+#ifdef EDHD
 		rec.emisDelta = dic->delta;
 		rec.incDelta = cal_delta_inc(dic->delta, hit.pvec.th, height, rHit,hit.pvec.vars,hit.pvecau.vars);
+#endif
 		rec.rCylindCoord = std::fabs(rHit * std::sin(hit.pvec.th));
 		rec.rSurf = std::fabs(rHit);
 		rec.thetaSurf = hit.pvec.th;
@@ -151,10 +157,7 @@ void notifyDone(const int &stopping_condition, const InitialCondition *const ic,
 #pragma omp ordered
 		{
 			arr_index++;
-			//std::cout << rHit << std::endl;
-			//std::cout << rDisk[j] << " " << rDisk[j+1] << std::endl;
 			while(rHit >= rDisk[j+1]) j++;
-			//std::cout << j << std::endl;
 			if (rDisk[j] <= rHit && rHit < rDisk[j + 1]) {
 				RayCount[j] = std::sin(dic->delta) * dic->stepDelta
 						/ std::fabs(rHit - rHit_prev);
@@ -172,7 +175,10 @@ void notifyDone(const int &stopping_condition, const InitialCondition *const ic,
 void finishProblem(const char *tempdir, const char *outtxt) {
 	std::cout << "Writing data..." << std::endl;
 	/* ----- file stuff ----- */
-	Real III[imax-1], ED[imax-1], HD[imax-1];
+	Real III[imax-1];
+#ifdef EDHD
+	Real ED[imax-1], HD[imax-1];
+#endif
 	for(int i=0, j=0; i<imax-1; i++) {
 
 	      bool nonono = false;
@@ -203,11 +209,11 @@ void finishProblem(const char *tempdir, const char *outtxt) {
 	        if (denom2 != 0)
 	            dthdrhau = (thetaAfterHitj - thetaBeforeHitj) / denom2;
 
-
+#ifdef EDHD
 	        ED[i] = (1-frac) * records[j].emisDelta + frac * records[j+1].emisDelta;
 	        HD[i] = (1-frac) * records[j].incDelta + frac * records[j+1].incDelta;
-
 	        if (ED[i] > M_PI/2.0) HD[i] *= (-1.0);
+#endif
 	        Real g[4][4];
 	        Real dg_dr[4][4];
 	        metric(rDiskNew[i], thetaDisk, g);
@@ -230,14 +236,14 @@ void finishProblem(const char *tempdir, const char *outtxt) {
 
 		FILE *out = fopen("data_lp.dat","w");
 	    for (int i = 0; i<imax-1; i++) {
-	        std::cout << III[i] << std::endl;
-	        std::cout << rDiskNew[i] << std::endl;
 
 	        if (std::isnan(III[i])) III[i] = 0.;
 	        // fprintf(out, "%f %f %f %e %f %f\n", a, height, rDisk[i], III[i], ED[i], HD[i]);
-	        //fprintf(out, "%f %e %f %f\n", rDisk[i], III[i], ED[i], HD[i]);
-	        fprintf(out, "%f %e\n", (double)rDiskNew[i], (double)III[i]);
-
+#ifdef EDHD
+	        fprintf(out, "%Lf %Le %Lf %Lf\n", rDiskNew[i], III[i], ED[i], HD[i]);
+#else
+	        fprintf(out, "%Lf %Le\n", rDiskNew[i], III[i]);
+#endif
 	    }
 	    fprintf(out, "\n");
 	    fclose(out);

@@ -175,8 +175,8 @@ int ThinDisk::checkIntersect(const Real &r, const Real &th, const Real &rprev,
     const Real &thprev) {
   if (r > outerr && rprev > outerr) return false;
   if (r <= innerr && rprev <= innerr) return false;
-  if ((th > Pi / 2.0 && thprev < Pi / 2.0)
-      || (th < Pi / 2.0 && thprev > Pi / 2.0)) {
+  if ((std::abs(th) > Pi / 2.0 && std::abs(thprev) < Pi / 2.0)
+      || (std::abs(th) < Pi / 2.0 && std::abs(thprev) > Pi / 2.0)) {
     return 512;
   }
   return 0;
@@ -202,8 +202,8 @@ PlungingRegion::PlungingRegion(Real isco) :
 int PlungingRegion::checkIntersect(const Real &r, const Real &th,
     const Real &rprev, const Real &thprev) {
   if (r > isco && rprev > isco) return false;
-  if ((th > Pi / 2.0 && thprev < Pi / 2.0)
-      || (th < Pi / 2.0 && thprev > Pi / 2.0)) {
+  if ((std::abs(th) > Pi / 2.0 && std::abs(thprev) < Pi / 2.0)
+      || (std::abs(th) < Pi / 2.0 && std::abs(thprev) > Pi / 2.0)) {
     return 600;
   }
   return 0;
