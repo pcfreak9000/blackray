@@ -113,7 +113,7 @@ QuadTree::~QuadTree() {
 //   delete p;
 // }
 }
-Real interpolate(Real a, Real b, Real f) {
+static Real interpolate(Real a, Real b, Real f) {
   return (1.0 - f) * a + f * b;
 }
 //finds any intersection. it is not guranteed (but very likely) that it is the closest one, i.e. the first hit. Sufficiently small stepsize should circuvent the problem,

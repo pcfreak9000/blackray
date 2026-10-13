@@ -30,8 +30,8 @@ def main(**kwargs):
     a52 = 0
     alpha = kwargs['alpha']
 
-    Nr = 1000 #1000
-    Nph = 400 #400
+    Nr = 400 #1000
+    Nph = 160 #400
     Rmax = 200
     rstep  = np.e**((np.log(Rmax)-np.log(np.abs(np.cos(np.pi*incl/180))))/Nr);
     pstep  = 2*np.pi/Nph;
@@ -42,7 +42,8 @@ def main(**kwargs):
     outtxt = tempdir+"output/a_%.5f_i_%.3f_a13_%.5f_a22_%.5f_gam_%.2f_afe_%.2f_xi_%.2f_ecut_%.2f_debugdata.txt"%(spin, incl, a13, a22, gamma, afe, logxi, ecut)
     outgtxt = tempdir+"output/a_%.5f_i_%.3f_a13_%.5f_a22_%.5f_gam_%.2f_afe_%.2f_xi_%.2f_ecut_%.2f_g.png"%(spin, incl, a13, a22, gamma, afe, logxi, ecut)
     outitxt = tempdir+"output/a_%.5f_i_%.3f_a13_%.5f_a22_%.5f_gam_%.2f_afe_%.2f_xi_%.2f_ecut_%.2f_i.png"%(spin, incl, a13, a22, gamma, afe, logxi, ecut)
-    rt_command = "ulimit -c unlimited && ./rt %f %f %f %f %f %f %f %f %f %s %s %s"%(spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep, path_to_disk_data_file,tempdir,outtxt)
+    illumfilename = "data_lp.dat"
+    rt_command = "ulimit -c unlimited && ./rt %f %f %f %f %f %f %f %f %f %s %s %s %s"%(spin, incl, a13, a22, a52, epsi3, alpha, rstep, pstep, path_to_disk_data_file,tempdir,outtxt,illumfilename)
     # os.system("cd raytracer/")
     print("Start of ray-tracing part ...")
     dddd = os.system(rt_command)

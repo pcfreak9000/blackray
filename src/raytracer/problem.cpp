@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <sstream>
 
 #include "problem.hpp"
 
@@ -12,6 +13,7 @@
 #include "environment.hpp"
 
 static constexpr Real dobs = 1.0e+8; /* distance of the observer */
+#define ILLUM 400
 
 struct Record {
   int stop_integration_condition;
@@ -30,8 +32,44 @@ static std::vector<Record> records;
 static size_t photon_index = 0;
 static Real iobs_deg;
 
+Real illumProfile[ILLUM];
+Real rIllProfile[ILLUM];
 
-void ironlinestuff(const Real& rstep, const Real& alpha, const char *tempdirs, std::vector<Record> &records){
+void readIllum(const char *illumfilename) {
+  std::ifstream illumfile(illumfilename);
+  if (!illumfile) {
+    std::cerr << "Error: Could not open illumination file!" << std::endl;
+    return;
+  }
+  std::string line;
+  size_t counter = 0;
+  while (std::getline(illumfile, line)) {
+    std::istringstream iss(line);
+    if (!(iss >> rIllProfile[counter] >> illumProfile[counter])) {
+      std::cerr << "Error: Malformed line - " << line << std::endl;
+      continue;
+    }
+    counter++;
+  }
+}
+static Real interpolate(Real a, Real b, Real f) {
+  return (1.0 - f) * a + f * b;
+}
+Real getIllum(const Real& r){
+  size_t lowerIndex = 0;
+  while(r>=rIllProfile[lowerIndex+1]) lowerIndex++;
+  Real leftr = rIllProfile[lowerIndex];
+  Real rightr = rIllProfile[lowerIndex];
+
+  Real left = illumProfile[lowerIndex];
+  Real right = illumProfile[lowerIndex+1];
+
+  Real factor = (r-leftr)/(rightr-leftr);
+  return interpolate(left,right,factor);
+}
+
+void ironlinestuff(const Real &rstep, const Real &alpha, const char *tempdirs,
+    std::vector<Record> &records) {
 
   /* ----- Set model for the spectral line ----- */
 
@@ -62,7 +100,7 @@ void ironlinestuff(const Real& rstep, const Real& alpha, const char *tempdirs, s
         size_t index = std::floor(bucket);
         if (index < IMAX) {
           Real qq = gfactor * gfactor * gfactor * gfactor;
-          qq = qq * std::pow(rec.r, alpha);
+          qq = qq * getIllum(rec.r);//std::pow(rec.r, alpha);
           /* --- integration - part 2 --- */
           //N_obs_add =
           N_obs[index] += SQR(rec.robs) * rstep2 * qq;
@@ -88,8 +126,8 @@ void ironlinestuff(const Real& rstep, const Real& alpha, const char *tempdirs, s
   snprintf(filename_o, sizeof(filename_o), (tempdirs + s1).c_str(), spin,
       iobs_deg, epsi3, a13, a22, a52);
   FILE *foutput = fopen(filename_o, "w");
-  if (foutput == nullptr) std::cerr << "Problems with iron line file!"
-      << std::endl;
+  if (foutput == nullptr)
+    std::cerr << "Problems with iron line file!" << std::endl;
 
   for (size_t i = 0; i < IMAX; i++) {
     fprintf(foutput, "%Lf %.10Lf\n", E_obs[i], N_obs[i] / N_tot);
@@ -113,8 +151,8 @@ void write(const char *tempdir, const char *outtxt, std::vector<Record> &recs) {
       iobs_deg, epsi3, a13, a22, a52);
 
   foutput_coord = fopen(filename_o2, "w");
-  if (foutput_coord == nullptr) std::cerr << "Problems with data file!"
-      << std::endl;
+  if (foutput_coord == nullptr)
+    std::cerr << "Problems with data file!" << std::endl;
 
   std::ofstream tmpOutFile(outtxt);
   for (Record r : recs) {
@@ -162,11 +200,13 @@ void initialConditionGenerator(const Real &rstep, const Real &pstep,
 void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
   /* ----- SETUP ENVIRONMENT ----- */
   Real maxx;
-  Real maxy;static Real iobs_deg;
+  Real maxy;
 
   const char *diskdatafile = argv[10];
   const Real rstep = atof(argv[8]);
   const Real pstep = atof(argv[9]);
+  const char *illumfilename = argv[13];
+  readIllum(illumfilename);
   iobs_deg = atof(argv[2]); /*inclination angle in degrees*/
   const Real spin2 = SQR(spin);
   std::unique_ptr<QuadTree> tree = readFileToTree(diskdatafile, maxx, maxy);
@@ -174,7 +214,8 @@ void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
   Real maxr_xdir = std::sqrt(SQR(maxx+10.0) - spin2) + 10.0;
   Real maxr_ydir = std::sqrt(SQR(maxy + 10.0)) + 10.0;
   Real checkr = maxr_ydir;
-  if (maxr_xdir > maxr_ydir) checkr = maxr_xdir;
+  if (maxr_xdir > maxr_ydir)
+    checkr = maxr_xdir;
   Real isco;
 
   find_isco(15.0, isco); /* Depends upon the properties of BH */
@@ -182,7 +223,7 @@ void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
   //env.addEntity(&disk);
 //  env->addEntity(std::make_unique<GRMHDDisk>(std::move(tree), checkr));
   env->addEntity(std::make_unique<ThinDisk>(isco, 200));
-  env->addEntity(std::make_unique<PlungingRegion>(isco));
+  //env->addEntity(std::make_unique<PlungingRegion>(isco));
 
   initialConditionGenerator(rstep, pstep, initcons);
   ray_count_total = initcons.count_total;
@@ -213,15 +254,13 @@ std::unique_ptr<InitialCondition> initialcondition(const size_t &ray_index) {
   const Real fact2 = dobs * std::sin(iobs) - yobs * std::cos(iobs);
 
   const Real r02 = xobs2 + yobs2 + dobs * dobs;
-  static Real iobs_deg;
 
   const Real r0 = std::sqrt(r02);
   const Real th0 = std::acos(fact1 / r0);
   const Real phi0 = std::atan2(xobs, fact2);
 
   const Real s0 = std::sin(th0);
-  const Real s02 = s0 * s0;static Real iobs_deg;
-
+  const Real s02 = s0 * s0;
 
   const Real kr0_unscl = dobs / r0;
   const Real kth0_unscl = -(std::cos(iobs) - dobs * fact1 / r02)
@@ -315,7 +354,8 @@ void notifyDone(const int &stopping_condition, const InitialCondition *const ic,
     Real gfactor;
     Real cosem;
     int x = hit.entity->calculateRedshift(ic, hit, gfactor, cosem);
-    if (x != 0) rec.stop_integration_condition = ST_INT_PROBLEM;
+    if (x != 0)
+      rec.stop_integration_condition = ST_INT_PROBLEM;
     rec.cosem = cosem;
     rec.gfactor = gfactor;
     handleNonsense(rec);
