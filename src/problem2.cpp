@@ -174,7 +174,9 @@ void notifyDone(const int &stopping_condition, const InitialCondition *const ic,
   }
 }
 
-void finishProblem(const char *tempdir, const char *outtxt) {
+void finishProblem(int argc, char *argv[]) {
+	  const char *tempdir = argv[11];
+	  const char *outtxt = argv[12];
   std::cout << "Writing data..." << std::endl;
   /* ----- file stuff ----- */
   Real III[imax - 1];

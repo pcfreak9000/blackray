@@ -46,7 +46,7 @@ void readIllum(const char *illumfilename) {
   while (std::getline(illumfile, line)) {
     std::istringstream iss(line);
     if (!(iss >> rIllProfile[counter] >> illumProfile[counter])) {
-      std::cerr << "Error: Malformed line - " << line << std::endl;
+      std::cerr << "Error: Malformed line: " << line << std::endl;
       continue;
     }
     counter++;
@@ -59,7 +59,7 @@ Real getIllum(const Real& r){
   size_t lowerIndex = 0;
   while(r>=rIllProfile[lowerIndex+1]) lowerIndex++;
   Real leftr = rIllProfile[lowerIndex];
-  Real rightr = rIllProfile[lowerIndex];
+  Real rightr = rIllProfile[lowerIndex+1];
 
   Real left = illumProfile[lowerIndex];
   Real right = illumProfile[lowerIndex+1];
@@ -100,7 +100,8 @@ void ironlinestuff(const Real &rstep, const Real &alpha, const char *tempdirs,
         size_t index = std::floor(bucket);
         if (index < IMAX) {
           Real qq = gfactor * gfactor * gfactor * gfactor;
-          qq = qq * getIllum(rec.r);//std::pow(rec.r, alpha);
+          //qq = qq * getIllum(rec.r);
+          qq = qq * std::pow(rec.r, alpha);
           /* --- integration - part 2 --- */
           //N_obs_add =
           N_obs[index] += SQR(rec.robs) * rstep2 * qq;
@@ -376,12 +377,16 @@ void notifyDone(const int &stopping_condition, const InitialCondition *const ic,
   }
 }
 
-void finishProblem(const char *tempdir, const char *outtxt) {
+void finishProblem(int argc, char *argv[]) {
+  const char *tempdir = argv[11];
+  const char *outtxt = argv[12];
   std::cout << "Writing data..." << std::endl;
   /* ----- file stuff ----- */
 
   write(tempdir, outtxt, records);
-
+  const Real rstep = atof(argv[8]);
+  const Real alpha = atof(argv[7]);
+  ironlinestuff(rstep, alpha, tempdir, records);
   std::cout << "Integrated " << (records.size()) << " rays of which "
       << photon_index << " hit the disk" << std::endl;
   std::cout << "Finishing..." << std::endl;

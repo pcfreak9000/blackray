@@ -29,8 +29,7 @@ int main(int argc, char *argv[]) {
 //  const Real alpha = atof(argv[7]);
 //  const Real rstep = atof(argv[8]);
 //  const Real pstep = atof(argv[9]);
-  const char *tempdir = argv[11];
-  const char *outtxt = argv[12];
+
 
   // iobs = acos(iobs_deg);
 
@@ -41,7 +40,7 @@ int main(int argc, char *argv[]) {
 
   raytrace(&env, ray_count_total);
 
-  finishProblem(tempdir,outtxt);
+  finishProblem(argc,argv);
 
   /* ----- calculate iron line stuff ----- */
  // ironlinestuff(rstep, alpha, tempdir, records);

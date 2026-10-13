@@ -21,4 +21,4 @@ struct myinitialconditions {
 void setupProblem(int argc, char *argv[], Env *env,size_t& ray_count_total);
 std::unique_ptr<InitialCondition> initialcondition(const size_t& ray_index);
 void notifyDone(const int& stopping_condition, const InitialCondition*const ic, const RayHit& hit, const size_t& ray_index);
-void finishProblem(const char* tempdir, const char* outtxt);
+void finishProblem(int argc, char *argv[]);
