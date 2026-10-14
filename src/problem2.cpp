@@ -17,8 +17,11 @@ Real johannsen_isco;
 #include "johannsen.h"
 
 //#define EDHD
-#define RayNum 100000
-#define imax 100
+#define RayNum 200000
+#define imax 800
+
+
+#define FILENAME_DATA_LP "data_lp.dat"
 
 static constexpr Real dobs = 2000; /* distance of the observer */
 
@@ -71,12 +74,12 @@ void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
   //env.addEntity(&disk);
 //  env->addEntity(std::make_unique<GRMHDDisk>(std::move(tree), checkr));
   env->addEntity(std::make_unique<ThinDisk>(isco, 1050));
-  env->addEntity(std::make_unique<PlungingRegion>(isco));
+  //env->addEntity(std::make_unique<PlungingRegion>(isco));
   johannsen_isco = kerr_rms(spin);
   eta = 1.0 - specific_energy(johannsen_isco);
   for (int i = 0; i < imax - 1; i++) {
     rDisk[i] = std::pow((Real) i / (imax - 2), 3) * (1000. - johannsen_isco)
-        + 1;
+        + johannsen_isco;
     RayCount[i] = 0;
   }
   rDisk[imax - 1] = 1050;
@@ -176,7 +179,6 @@ void notifyDone(const int &stopping_condition, const InitialCondition *const ic,
 
 void finishProblem(int argc, char *argv[]) {
 	  const char *tempdir = argv[11];
-	  const char *outtxt = argv[12];
   std::cout << "Writing data..." << std::endl;
   /* ----- file stuff ----- */
   Real III[imax - 1];
@@ -261,7 +263,7 @@ void finishProblem(int argc, char *argv[]) {
 
   }
 
-  FILE *out = fopen("data_lp.dat", "w");
+  FILE *out = fopen((std::string(tempdir)+FILENAME_DATA_LP).c_str(), "w");
   for (int i = 0; i < imax - 1; i++) {
 
     if (std::isnan(III[i]))

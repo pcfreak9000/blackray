@@ -111,7 +111,8 @@ for i in range(10):
     # print(xill_spec[i].shape)
 
 
-filename = tempdir+"data/xill_spec_gam_%.2f_afe_%.2f_xi_%.2f_ecut_%.2f_incl_%.2f.dat" % (gamma, afe, logxi, ecut, incl)
+#filename = tempdir+"data/xill_spec_gam_%.2f_afe_%.2f_xi_%.2f_ecut_%.2f_incl_%.2f.dat" % (gamma, afe, logxi, ecut, incl)
+filename = tempdir+"xillver_spectrum.dat"
 file = open(filename, "w")
 
 for i in range(10):

@@ -88,9 +88,10 @@ def main(preptuple):
         plt.close()
 
 if __name__ == "__main__":
-    outtxt = argv[1]
-    outg = argv[2]
-    outi = argv[3]
+    tempdir = argv[1]
+    outtxt = tempdir+"rays_debug.dat" #argv[1]
+    outg = tempdir+"gfactor.png" #argv[2]
+    outi = tempdir+"hitindex.png" #argv[3]
     
     size=2048
     

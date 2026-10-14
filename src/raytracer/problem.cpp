@@ -11,9 +11,14 @@
 #include "find_isco.hpp"
 #include "quadtree.hpp"
 #include "environment.hpp"
+#include "ParameterInput.hpp"
+
+#define FILENAME_RAYS_DEBUG "rays_debug.dat"
+#define FILENAME_PHOTONS "photons.dat"
+#define FILENAME_IRONLINE "ironline.dat"
 
 static constexpr Real dobs = 1.0e+8; /* distance of the observer */
-#define ILLUM 400
+#define ILLUM 800
 
 struct Record {
   int stop_integration_condition;
@@ -118,15 +123,17 @@ void ironlinestuff(const Real &rstep, const Real &alpha, const char *tempdirs,
   }
 
   /* --- print iron line --- */
-  char filename_o[256];
+//  char filename_o[256];
   /*Iron line output file*/
   // sprintf(filename_o,"iron_a%.03f.epsilon_r%.02f.epsilon_t%.02f.i%.02f.dat",spin,epsi3,iobs_deg);
   // sprintf(filename_o,"ironline_data/iron_a%.05Le.i%.02Le.e_%.02Le.a13_%.02Le.a22_%.02Le.a52_%.02Le.dat",spin,iobs_deg,epsi3,a13,a22,a52);
-  std::string s1("ironline_data/"
-      "iron_a_%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%.05Lf.dat");
-  snprintf(filename_o, sizeof(filename_o), (tempdirs + s1).c_str(), spin,
-      iobs_deg, epsi3, a13, a22, a52);
-  FILE *foutput = fopen(filename_o, "w");
+//  std::string s1("ironline_data/"
+//      "iron_a_%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%.05Lf.dat");
+//  snprintf(filename_o, sizeof(filename_o), (tempdirs + s1).c_str(), spin,
+//      iobs_deg, epsi3, a13, a22, a52);
+  //FILE *foutput = fopen(filename_o, "w");
+  std::string tempdir(tempdirs);
+  FILE *foutput = fopen((tempdir + FILENAME_IRONLINE).c_str(),"w");
   if (foutput == nullptr)
     std::cerr << "Problems with iron line file!" << std::endl;
 
@@ -136,7 +143,7 @@ void ironlinestuff(const Real &rstep, const Real &alpha, const char *tempdirs,
   fclose(foutput);
 }
 
-void write(const char *tempdir, const char *outtxt, std::vector<Record> &recs) {
+void write(const char *tempdir, std::vector<Record> &recs) {
   char filename_o2[256];
 
   FILE *foutput_coord;
@@ -145,17 +152,18 @@ void write(const char *tempdir, const char *outtxt, std::vector<Record> &recs) {
 
   /*photon data output file*/
   // sprintf(filename_o2,"coord_a%.03f.epsilon_r%.02f.epsilon_t%.02f.i%.02f.dat",spin,epsi3,iobs_deg);
-  std::string s2(
-      "data/"
-          "photons_data_a%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%.05Lf.dat");
-  snprintf(filename_o2, sizeof(filename_o2), (tempdirs + s2).c_str(), spin,
-      iobs_deg, epsi3, a13, a22, a52);
+//  std::string s2(
+//      "data/"
+//          "photons_data_a%.05Lf_i_%.05Lf_e_%.05Lf_a13_%.05Lf_a22_%.05Lf_a52_%.05Lf.dat");
+//  snprintf(filename_o2, sizeof(filename_o2), (tempdirs + s2).c_str(), spin,
+//      iobs_deg, epsi3, a13, a22, a52);
 
-  foutput_coord = fopen(filename_o2, "w");
+  //foutput_coord = fopen(filename_o2, "w");
+  foutput_coord = fopen((tempdirs+FILENAME_PHOTONS).c_str(), "w");
   if (foutput_coord == nullptr)
     std::cerr << "Problems with data file!" << std::endl;
 
-  std::ofstream tmpOutFile(outtxt);
+  std::ofstream tmpOutFile(tempdirs+FILENAME_RAYS_DEBUG);
   for (Record r : recs) {
     if (r.output) {
       fprintf(foutput_coord, "%zu %Lf %Lf %Lf %Lf %Lf\n", r.photon_index,
@@ -198,17 +206,17 @@ void initialConditionGenerator(const Real &rstep, const Real &pstep,
   ic.count_total = ic.robs_vec.size() * ic.pobs_vec.size();
 
 }
-void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
+void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total, const ParameterInput& params) {
   /* ----- SETUP ENVIRONMENT ----- */
   Real maxx;
   Real maxy;
 
-  const char *diskdatafile = argv[10];
-  const Real rstep = atof(argv[8]);
-  const Real pstep = atof(argv[9]);
-  const char *illumfilename = argv[13];
+  const char *diskdatafile = argv[2];
+  const Real rstep = params.getReal("Raytracing","rstep");//atof(argv[8]);
+  const Real pstep = params.getReal("Raytracing","pstep");//atof(argv[9]);
+  const char *illumfilename = argv[5];
   readIllum(illumfilename);
-  iobs_deg = atof(argv[2]); /*inclination angle in degrees*/
+  iobs_deg = params.getReal("Raytracing","incl");//atof(argv[2]); /*inclination angle in degrees*/
   const Real spin2 = SQR(spin);
   std::unique_ptr<QuadTree> tree = readFileToTree(diskdatafile, maxx, maxy);
 //  if (!tree) return 1;
@@ -224,7 +232,7 @@ void setupProblem(int argc, char *argv[], Env *env, size_t &ray_count_total) {
   //env.addEntity(&disk);
 //  env->addEntity(std::make_unique<GRMHDDisk>(std::move(tree), checkr));
   env->addEntity(std::make_unique<ThinDisk>(isco, 200));
-  //env->addEntity(std::make_unique<PlungingRegion>(isco));
+ // env->addEntity(std::make_unique<PlungingRegion>(isco));
 
   initialConditionGenerator(rstep, pstep, initcons);
   ray_count_total = initcons.count_total;
@@ -244,7 +252,6 @@ std::unique_ptr<InitialCondition> initialcondition(const size_t &ray_index) {
 
   const Real xobs = robs * std::cos(pobs);
   const Real yobs = robs * std::sin(pobs);
-  static Real iobs_deg;
 
   const Real xobs2 = xobs * xobs;
   const Real yobs2 = yobs * yobs;
@@ -377,15 +384,14 @@ void notifyDone(const int &stopping_condition, const InitialCondition *const ic,
   }
 }
 
-void finishProblem(int argc, char *argv[]) {
-  const char *tempdir = argv[11];
-  const char *outtxt = argv[12];
+void finishProblem(int argc, char *argv[],const ParameterInput& params) {
+  const char *tempdir = argv[3];
   std::cout << "Writing data..." << std::endl;
   /* ----- file stuff ----- */
 
-  write(tempdir, outtxt, records);
-  const Real rstep = atof(argv[8]);
-  const Real alpha = atof(argv[7]);
+  write(tempdir, records);
+  const Real rstep = params.getReal("Raytracing","rstep");//atof(argv[8]);
+  const Real alpha = params.getReal("Corona","alpha");//atof(argv[7]);
   ironlinestuff(rstep, alpha, tempdir, records);
   std::cout << "Integrated " << (records.size()) << " rays of which "
       << photon_index << " hit the disk" << std::endl;
